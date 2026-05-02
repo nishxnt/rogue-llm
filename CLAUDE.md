@@ -30,3 +30,6 @@ Currently in: Phase 0 — Project Setup.
 - Judge: qwen/qwen3-32b
 - Cross-validator: openai/gpt-oss-120b
 - Safety: openai/gpt-oss-safeguard-20b
+
+## Future tasks
+- Upgrade target: LangChain 1.x + `langchain-classic` once the v1 stack stabilizes (currently held on 0.3 line for tutorial compatibility; this also caps `groq` at 0.x via `langchain-groq` 0.3.x).

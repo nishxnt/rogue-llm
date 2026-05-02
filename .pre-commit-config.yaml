@@ -1,0 +1,32 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: detect-private-key
+
+  - repo: https://github.com/psf/black
+    rev: 26.3.1
+    hooks:
+      - id: black
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.12
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.20.2
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - "pydantic ~= 2.13.0"
+          - "pydantic-settings ~= 2.14.0"
+          - types-PyYAML
+        args: ["--config-file=pyproject.toml"]
