@@ -12,7 +12,7 @@ def test_settings_load_with_groq_key(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_pinned_model_ids() -> None:
-    s = Settings(groq_api_key="x")  # type: ignore[arg-type]
+    s = Settings(groq_api_key="x")
     assert s.target_model == "llama-3.1-8b-instant"
     assert s.mutator_model == "llama-3.3-70b-versatile"
     assert s.judge_model == "qwen/qwen3-32b"
@@ -21,6 +21,6 @@ def test_pinned_model_ids() -> None:
 
 
 def test_observability_keys_optional() -> None:
-    s = Settings(groq_api_key="x")  # type: ignore[arg-type]
+    s = Settings(groq_api_key="x")
     assert s.langsmith_api_key is None
     assert s.wandb_api_key is None

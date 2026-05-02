@@ -370,12 +370,12 @@ Layer 1 — Input Sanitisation (deterministic)
   Regex patterns for known injection markers
   Token length enforcement (block > 2000 tokens)
   Forbidden character sequences
-  
+
 Layer 2 — Safety Classification (Groq gpt-oss-safeguard-20b)
   Hosted policy-following content moderation
   Bring-your-own-policy: define rules for our security-domain RAG
   Block requests classified as harmful with confidence > threshold
-  
+
 Layer 3 — Output Filtering (deterministic)
   PII regex scan on all responses
   System prompt similarity check (block leakage > threshold)

@@ -28,5 +28,6 @@ repos:
         additional_dependencies:
           - "pydantic ~= 2.13.0"
           - "pydantic-settings ~= 2.14.0"
+          - "pytest ~= 9.0.0"
           - types-PyYAML
         args: ["--config-file=pyproject.toml"]
