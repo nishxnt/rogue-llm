@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# uv / venv
+.venv/
+
+# Secrets
+.env
+
+# Generated artifacts (keep dirs via .gitkeep)
+cache/*
+!cache/.gitkeep
+reports/run_*
+data/knowledge_base/*
+!data/knowledge_base/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store

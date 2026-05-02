@@ -1,0 +1,92 @@
+[project]
+name = "rogue-llm"
+version = "0.1.0"
+description = "Automated adversarial testing pipeline for RAG systems aligned to OWASP LLM Top 10 (2025)."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { file = "LICENSE" }
+authors = [{ name = "Nishant Gupta" }]
+dependencies = [
+    "langchain ~= 0.3.0",
+    "langchain-community ~= 0.3.0",
+    "langchain-groq ~= 0.3.0",
+    "faiss-cpu ~= 1.13.0",
+    "sentence-transformers ~= 5.4.0",
+    "groq ~= 0.37.0",
+    "pydantic ~= 2.13.0",
+    "pydantic-settings ~= 2.14.0",
+    "typer ~= 0.25.0",
+    "structlog ~= 25.5.0",
+    "jinja2 ~= 3.1.0",
+    "plotly ~= 6.7.0",
+]
+
+[dependency-groups]
+eval = [
+    "ragas ~= 0.4.0",
+    "deepeval ~= 3.9.0",
+    "datasketch ~= 1.10.0",
+    "spacy ~= 3.8.0",
+]
+dev = [
+    "pytest ~= 9.0.0",
+    "pytest-cov ~= 7.1.0",
+    "pytest-asyncio ~= 1.3.0",
+    "black ~= 26.3.0",
+    "ruff ~= 0.15.0",
+    "mypy ~= 1.20.0",
+    "pre-commit ~= 4.6.0",
+    "ipykernel ~= 7.2.0",
+    "langsmith ~= 0.8.0",
+    "wandb ~= 0.26.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM", "TCH"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["S101"]
+
+[tool.mypy]
+python_version = "3.11"
+disallow_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = [
+    "faiss.*",
+    "datasketch.*",
+    "ragas.*",
+    "deepeval.*",
+    "langchain_community.*",
+    "langchain_groq.*",
+    "sentence_transformers.*",
+    "spacy.*",
+    "wandb.*",
+    "plotly.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra"
