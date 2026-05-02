@@ -8,8 +8,6 @@ Model IDs are defaults; override via env if Groq deprecates a pin (see
 PROJECT_SPEC.md §13 risk register).
 """
 
-from __future__ import annotations
-
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -44,4 +42,4 @@ class Settings(BaseSettings):
 
 def get_settings() -> Settings:
     """Return a fresh Settings instance. Cheap; pydantic-settings caches env reads."""
-    return Settings()  # type: ignore[call-arg]
+    return Settings()
