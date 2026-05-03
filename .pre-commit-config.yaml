@@ -32,4 +32,6 @@ repos:
           - types-PyYAML
           - "structlog ~= 25.5.0"
           - "typer ~= 0.25.0"
+          - "instructor ~= 1.15.0"
+          - "groq ~= 0.37.0"
         args: ["--config-file=pyproject.toml"]

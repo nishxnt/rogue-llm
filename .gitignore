@@ -20,6 +20,8 @@ dist/
 cache/*
 !cache/.gitkeep
 reports/run_*
+results/*
+!results/.gitkeep
 data/knowledge_base/*
 !data/knowledge_base/.gitkeep
 data/index/*
