@@ -8,14 +8,13 @@ without a refactor.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 from uuid import uuid4
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from pydantic import BaseModel, Field
 
-if TYPE_CHECKING:
-    from src.target_system.rag_chatbot import Response
+from src.target_system.models import Response  # noqa: TCH001
 
 
 class Turn(BaseModel):

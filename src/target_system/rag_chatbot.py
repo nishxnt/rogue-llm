@@ -11,7 +11,6 @@ from __future__ import annotations
 import time
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 import structlog
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -20,31 +19,16 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_groq import ChatGroq
-from pydantic import BaseModel, Field
 
 from src.config import Settings, get_settings
 from src.target_system.conversation import Conversation
+from src.target_system.models import Response, RetrievedChunk
 from src.target_system.prompts import SYSTEM_PROMPT
 
 log = structlog.get_logger()
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _INDEX_DIR = _PROJECT_ROOT / "data" / "index" / "faiss_index"
-
-
-class RetrievedChunk(BaseModel):
-    content: str
-    source: str
-    doc_id: str
-    score: float
-
-
-class Response(BaseModel):
-    answer: str
-    retrieved_chunks: list[RetrievedChunk]
-    latency_ms: float
-    tokens_used: int
-    conversation_id: str = Field(default_factory=lambda: str(uuid4()))
 
 
 def _format_docs(docs: list[Any]) -> str:
