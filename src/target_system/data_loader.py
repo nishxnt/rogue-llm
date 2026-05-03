@@ -1,7 +1,6 @@
-"""Knowledge base downloader for the RAG target system.
+"""Knowledge base downloader and FAISS index builder for the RAG target system.
 
 Idempotent — skips any step whose output already exists unless --force is passed.
-build_index() is implemented in the follow-up commit.
 
 CLI usage:
     uv run python -m src.target_system.data_loader build [--force]
@@ -15,15 +14,22 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import psutil
 import requests
 import structlog
+import torch
 import typer
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 log = structlog.get_logger()
 app = typer.Typer(no_args_is_help=True)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _KB_DIR = _PROJECT_ROOT / "data" / "knowledge_base"
+_INDEX_DIR = _PROJECT_ROOT / "data" / "index" / "faiss_index"
 
 # NVD API v2.0 — 2024 HIGH+CRITICAL window per project spec.
 _NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
@@ -236,12 +242,99 @@ def _save_download_metadata(nvd_record_count: int) -> None:
     log.info("Download metadata saved", path=str(metadata_path))
 
 
+def _load_nvd_documents() -> list[Document]:
+    nvd_path = _KB_DIR / "nvd_cves.jsonl"
+    if not nvd_path.exists():
+        raise FileNotFoundError(f"NVD JSONL not found: {nvd_path}. Run download first.")
+    docs: list[Document] = []
+    with nvd_path.open(encoding="utf-8") as fh:
+        for line in fh:
+            record: dict[str, Any] = json.loads(line)
+            docs.append(
+                Document(
+                    page_content=record["description"],
+                    metadata={
+                        "source": "nvd",
+                        "doc_id": record["id"],
+                        "severity": record.get("severity", ""),
+                        "published": record.get("published", ""),
+                    },
+                )
+            )
+    return docs
+
+
+def _load_owasp_documents() -> list[Document]:
+    docs: list[Document] = []
+    for source_key, subdir in (
+        ("owasp_llm", "owasp_llm_top10"),
+        ("owasp_web", "owasp_web_top10"),
+    ):
+        owasp_dir = _KB_DIR / subdir
+        if not owasp_dir.exists():
+            log.warning("OWASP directory missing, skipping", path=str(owasp_dir))
+            continue
+        for md_file in sorted(owasp_dir.glob("*.md")):
+            text = md_file.read_text(encoding="utf-8")
+            docs.append(
+                Document(
+                    page_content=text,
+                    metadata={
+                        "source": source_key,
+                        "doc_id": md_file.stem,
+                        "filename": md_file.name,
+                    },
+                )
+            )
+    return docs
+
+
 def build_index(force: bool = False) -> None:
     """Build FAISS vector index from downloaded knowledge base files.
 
-    Implemented in the follow-up commit (feat: add FAISS index builder).
+    Splits documents with RecursiveCharacterTextSplitter(chunk_size=1000,
+    chunk_overlap=150) and embeds with all-MiniLM-L6-v2 on MPS when available.
+    Saves the index to data/index/faiss_index/.
+
+    # TODO: switch to token-based splitter when corpus expands beyond ~5k chunks.
     """
-    log.warning("build_index not yet implemented — re-run after next commit")
+    index_path = _INDEX_DIR
+    if index_path.exists() and not force:
+        log.info("FAISS index already exists, skipping", path=str(index_path))
+        return
+
+    raw_docs = _load_nvd_documents() + _load_owasp_documents()
+    log.info("Loaded raw documents", count=len(raw_docs))
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=150,
+        add_start_index=True,
+    )
+    chunks = splitter.split_documents(raw_docs)
+    log.info("Split into chunks", chunk_count=len(chunks))
+
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    log.info("Embedding model device", device=device)
+
+    rss_before = psutil.Process().memory_info().rss / 1024 / 1024
+    log.info("RSS before embedding", rss_mb=f"{rss_before:.0f}")
+
+    embeddings = HuggingFaceEmbeddings(
+        model_name="all-MiniLM-L6-v2",
+        model_kwargs={"device": device},
+        encode_kwargs={"batch_size": 32, "show_progress_bar": True},
+    )
+    vectorstore = FAISS.from_documents(chunks, embeddings)
+
+    rss_after = psutil.Process().memory_info().rss / 1024 / 1024
+    log.info(
+        "RSS after embedding", rss_mb=f"{rss_after:.0f}", delta_mb=f"{rss_after - rss_before:.0f}"
+    )
+
+    index_path.mkdir(parents=True, exist_ok=True)
+    vectorstore.save_local(str(index_path))
+    log.info("FAISS index saved", path=str(index_path), chunks=len(chunks))
 
 
 @app.command()
