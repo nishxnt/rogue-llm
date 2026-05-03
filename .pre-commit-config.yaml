@@ -30,4 +30,6 @@ repos:
           - "pydantic-settings ~= 2.14.0"
           - "pytest ~= 9.0.0"
           - types-PyYAML
+          - "structlog ~= 25.5.0"
+          - "typer ~= 0.25.0"
         args: ["--config-file=pyproject.toml"]
