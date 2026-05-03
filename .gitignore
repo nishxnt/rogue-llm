@@ -22,6 +22,10 @@ cache/*
 reports/run_*
 data/knowledge_base/*
 !data/knowledge_base/.gitkeep
+data/index/*
+!data/index/.gitkeep
+data/eval/*
+!data/eval/.gitkeep
 
 # Jupyter
 .ipynb_checkpoints/
