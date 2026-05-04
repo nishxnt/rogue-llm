@@ -1,5 +1,9 @@
 """Baseline RAGAS evaluation pipeline.
 
+Cross-family judge: openai/gpt-oss-120b grades llama-3.1-8b-instant responses.
+This matches PROJECT_SPEC.md §5 — judge and target must be different model families
+to prevent correlated failures inflating faithfulness scores.
+
 Two-step workflow:
     Step 1 — generate 30 semi-synthetic QA candidates and save for review:
         uv run python -m src.evaluation.baseline generate
@@ -7,6 +11,10 @@ Two-step workflow:
     Step 2 — after manually reviewing / editing data/eval/baseline_qa.jsonl,
     run RAGAS Faithfulness scoring:
         uv run python -m src.evaluation.baseline score
+
+Resume safety: a checkpoint JSONL is written after every scored entry. If the run
+is interrupted, re-running `score` will skip already-scored entries and continue
+from where it left off. The checkpoint is deleted on successful completion.
 """
 
 from __future__ import annotations
@@ -35,6 +43,7 @@ _EVAL_DIR = _PROJECT_ROOT / "data" / "eval"
 _RESULTS_DIR = _PROJECT_ROOT / "results"
 _QA_PATH = _EVAL_DIR / "baseline_qa.jsonl"
 _SCORES_PATH = _RESULTS_DIR / "baseline_ragas.json"
+_CHECKPOINT_PATH = _RESULTS_DIR / "baseline_ragas_checkpoint.jsonl"
 
 _SEMI_SYNTHETIC_COUNT = 30
 
@@ -221,15 +230,55 @@ def _run_generate() -> None:
     print(f"{'=' * 60}\n")
 
 
+def _load_checkpoint() -> dict[str, dict[str, Any]]:
+    """Load previously scored entries from checkpoint. Returns id → record map."""
+    pre_scored: dict[str, dict[str, Any]] = {}
+    if not _CHECKPOINT_PATH.exists():
+        return pre_scored
+    with _CHECKPOINT_PATH.open() as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+                if record.get("faithfulness_score") is not None:
+                    pre_scored[record["id"]] = record
+            except json.JSONDecodeError:
+                pass
+    return pre_scored
+
+
 async def _score_all(
     qa_records: list[dict[str, Any]],
     chatbot: Any,
     scorer: Any,
+    pre_scored: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Score each QA record with RAGAS Faithfulness."""
-    scored: list[dict[str, Any]] = []
-    for i, record in enumerate(qa_records):
-        log.info("Scoring", idx=i + 1, total=len(qa_records), question=record["question"][:60])
+    """Score QA records with RAGAS Faithfulness. Skips pre-scored entries.
+
+    Writes a checkpoint after every successful score so progress survives interruption.
+    """
+    # Preserve ordering: pre-scored entries interleaved at their original positions
+    result_map: dict[str, dict[str, Any]] = dict(pre_scored)
+
+    to_score = [r for r in qa_records if r["id"] not in pre_scored]
+    log.info(
+        "Scoring plan",
+        total=len(qa_records),
+        pre_scored=len(pre_scored),
+        to_score=len(to_score),
+    )
+
+    _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    for i, record in enumerate(to_score):
+        log.info(
+            "Scoring",
+            idx=i + 1,
+            total=len(to_score),
+            question=record["question"][:60],
+        )
         try:
             response = chatbot.query(record["question"])
             result = await scorer.ascore(
@@ -237,27 +286,37 @@ async def _score_all(
                 response=response.answer,
                 retrieved_contexts=[c.content for c in response.retrieved_chunks],
             )
-            scored.append(
-                {
-                    **record,
-                    "target_answer": response.answer,
-                    "faithfulness_score": float(result.score),
-                    "retrieved_doc_ids": [c.doc_id for c in response.retrieved_chunks],
-                }
-            )
-            # Respect Groq judge quota: qwen3-32b = 1000 RPD
-            await asyncio.sleep(2.0)
+            entry: dict[str, Any] = {
+                **record,
+                "target_answer": response.answer,
+                "faithfulness_score": float(result.value),
+                "retrieved_doc_ids": [c.doc_id for c in response.retrieved_chunks],
+            }
+            # Persist immediately — a subsequent interruption cannot lose this score.
+            with _CHECKPOINT_PATH.open("a") as fh:
+                fh.write(json.dumps(entry) + "\n")
+            result_map[record["id"]] = entry
+            # gpt-oss-120b: separate TPM pool from the target model; 1000 RPD / ~30 RPM.
+            # RAGAS makes 4-6 internal calls per question (statement extraction + NLI per
+            # statement). At 8s sleep + ~5s latency = ~8 iter/min × 5 calls = 40 calls/min.
+            # Below the 30 RPM ceiling with headroom.
+            await asyncio.sleep(8.0)
         except Exception as exc:
             log.warning("Scoring failed", question=record["question"][:60], error=str(exc))
-            scored.append({**record, "faithfulness_score": None, "error": str(exc)})
-    return scored
+            result_map[record["id"]] = {**record, "faithfulness_score": None, "error": str(exc)}
+
+    # Return in original QA order
+    return [
+        result_map.get(r["id"], {**r, "faithfulness_score": None, "error": "not scored"})
+        for r in qa_records
+    ]
 
 
 def _run_score() -> None:
     # Import here to avoid loading heavy deps when just generating
     import instructor
-    from groq import Groq as GroqSDK
-    from ragas.llms.base import InstructorLLM
+    from groq import AsyncGroq as AsyncGroqSDK
+    from ragas.llms.base import InstructorLLM, InstructorModelArgs
     from ragas.metrics.collections import Faithfulness
 
     from src.target_system.rag_chatbot import RAGChatbot
@@ -286,31 +345,93 @@ def _run_score() -> None:
 
     log.info("Loaded QA records for scoring", count=len(qa_records))
 
+    # Resume: load checkpoint so we skip already-scored entries.
+    pre_scored = _load_checkpoint()
+    if pre_scored:
+        log.info(
+            "Resuming from checkpoint",
+            already_scored=len(pre_scored),
+            remaining=len(qa_records) - len(pre_scored),
+            checkpoint=str(_CHECKPOINT_PATH),
+        )
+
+    # Judge model selection (confirmed 2026-05-04, cross-family design per PROJECT_SPEC §5):
+    # - qwen/qwen3-32b: cannot produce structured outputs on Groq (tool_use_failed /
+    #   json_validate_failed in both TOOLS and JSON instructor modes).
+    # - openai/gpt-oss-120b: confirmed working in both Mode.JSON and Mode.TOOLS. Different
+    #   model family from target (OpenAI vs Meta/Llama) — satisfies cross-family requirement.
+    #   Separate TPM pool; 1000 RPD free tier is sufficient for 40-question baseline scoring.
+    # - llama-3.1-8b-instant (previously attempted): shares TPM pool with the RAG target,
+    #   causing combined token exhaustion; also same-family, violating PROJECT_SPEC §5.
+    effective_judge = settings.judge_model
+    instructor_mode = instructor.Mode.JSON
+    if "qwen" in settings.judge_model.lower():
+        effective_judge = settings.cross_validator_model  # openai/gpt-oss-120b
+        instructor_mode = instructor.Mode.TOOLS
+        log.warning(
+            "qwen3-32b structured output unsupported on Groq — switching to cross-family judge",
+            fallback=effective_judge,
+            mode="TOOLS",
+            note="Cross-family judge restored per PROJECT_SPEC.md §5 (OpenAI family vs Llama target)",
+        )
+
+    # AsyncGroq required: RAGAS ascore() calls agenerate() which needs an async client.
     groq_client = instructor.from_groq(
-        GroqSDK(api_key=settings.groq_api_key.get_secret_value()),
+        AsyncGroqSDK(api_key=settings.groq_api_key.get_secret_value()),
+        mode=instructor_mode,
     )
     judge_llm = InstructorLLM(
         client=groq_client,
-        model=settings.judge_model,
+        model=effective_judge,
         provider="groq",
+        model_args=InstructorModelArgs(max_tokens=4096),
     )
     scorer = Faithfulness(llm=judge_llm)
     chatbot = RAGChatbot(settings=settings)
 
-    scored = asyncio.run(_score_all(qa_records, chatbot, scorer))
+    scored = asyncio.run(_score_all(qa_records, chatbot, scorer, pre_scored))
+
+    def _stratify(records: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
+        groups: dict[str, list[float]] = {}
+        for r in records:
+            v = r.get(key, "unknown")
+            fs = r.get("faithfulness_score")
+            if fs is not None:
+                groups.setdefault(str(v), []).append(float(fs))
+        return {
+            grp: {
+                "mean": round(sum(vals) / len(vals), 4),
+                "n": len(vals),
+            }
+            for grp, vals in sorted(groups.items())
+        }
 
     valid_scores = [
         s["faithfulness_score"] for s in scored if s.get("faithfulness_score") is not None
     ]
+    error_count = sum(1 for s in scored if s.get("error") is not None)
     mean_faithfulness = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
+
+    by_source: dict[str, dict[str, Any]] = _stratify(scored, "source")
+    by_construction: dict[str, dict[str, Any]] = _stratify(scored, "construction")
 
     output = {
         "run_at": datetime.now(UTC).isoformat(),
         "model_target": settings.target_model,
-        "model_judge": settings.judge_model,
+        "model_judge_configured": settings.judge_model,
+        "model_judge_effective": effective_judge,
+        "judge_model": effective_judge,
+        "run_metadata": {
+            "total_qa": len(qa_records),
+            "scored": len(valid_scores),
+            "errored": error_count,
+            "resumed_from_checkpoint": len(pre_scored),
+        },
         "qa_count": len(qa_records),
         "scored_count": len(valid_scores),
         "mean_faithfulness": round(mean_faithfulness, 4),
+        "by_source": by_source,
+        "by_construction": by_construction,
         "scores": scored,
     }
 
@@ -318,15 +439,31 @@ def _run_score() -> None:
     with _SCORES_PATH.open("w") as f:
         json.dump(output, f, indent=2)
 
+    # Clean up checkpoint on successful write — all scores are now in the JSON.
+    if _CHECKPOINT_PATH.exists():
+        _CHECKPOINT_PATH.unlink()
+        log.info("Checkpoint deleted after successful write", path=str(_CHECKPOINT_PATH))
+
     log.info(
         "Baseline RAGAS scoring complete",
+        judge=effective_judge,
         mean_faithfulness=mean_faithfulness,
         scored=len(valid_scores),
+        errored=error_count,
         output=str(_SCORES_PATH),
     )
     print(f"\n{'=' * 60}")
-    print(f"RAGAS Faithfulness baseline: {mean_faithfulness:.4f}")
-    print(f"Scored {len(valid_scores)}/{len(qa_records)} records")
+    print(f"RAGAS Faithfulness baseline: {mean_faithfulness:.4f}  (n={len(valid_scores)})")
+    print(f"Judge model: {effective_judge}")
+    print()
+    print("By source:")
+    for src, stat in by_source.items():
+        print(f"  {src:<20} {stat['mean']:.4f}  (n={stat['n']})")
+    print()
+    print("By construction:")
+    for ctype, stat in by_construction.items():
+        print(f"  {ctype:<25} {stat['mean']:.4f}  (n={stat['n']})")
+    print()
     print(f"Results: {_SCORES_PATH}")
     print(f"{'=' * 60}\n")
 

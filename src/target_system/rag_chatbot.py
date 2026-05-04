@@ -42,7 +42,8 @@ class RAGChatbot:
         self._settings = settings or get_settings()
         self._embeddings = HuggingFaceEmbeddings(
             model_name=self._settings.embedding_model,
-            encode_kwargs={"batch_size": 32, "show_progress_bar": False},
+            encode_kwargs={"batch_size": 32},
+            show_progress=False,
         )
         self._vectorstore = FAISS.load_local(
             str(_INDEX_DIR),

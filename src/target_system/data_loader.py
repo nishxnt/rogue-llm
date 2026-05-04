@@ -32,9 +32,14 @@ _KB_DIR = _PROJECT_ROOT / "data" / "knowledge_base"
 _INDEX_DIR = _PROJECT_ROOT / "data" / "index" / "faiss_index"
 
 # NVD API v2.0 — 2024 HIGH+CRITICAL window per project spec.
+# NVD caps date windows at <120 days and requires +00:00 timezone suffix.
+# Split Jan–Sep 2024 (273 days) into three 90-day windows to stay within the limit.
 _NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-_NVD_PUB_START = "2024-01-01T00:00:00.000"
-_NVD_PUB_END = "2024-09-30T23:59:59.999"
+_NVD_DATE_WINDOWS = [
+    ("2024-01-01T00:00:00.000+00:00", "2024-04-09T23:59:59.999+00:00"),
+    ("2024-04-10T00:00:00.000+00:00", "2024-07-07T23:59:59.999+00:00"),
+    ("2024-07-08T00:00:00.000+00:00", "2024-09-30T23:59:59.999+00:00"),
+]
 _NVD_SEVERITIES = ("HIGH", "CRITICAL")
 _NVD_RESULTS_PER_PAGE = 2000
 # 5 req / 30 s unauthenticated → 6 s min; 7 s provides headroom.
@@ -86,10 +91,12 @@ def _extract_english_description(
     return None
 
 
-def _fetch_nvd_page(severity: str, start_index: int) -> dict[str, Any]:
+def _fetch_nvd_page(
+    severity: str, start_index: int, pub_start: str, pub_end: str
+) -> dict[str, Any]:
     params: dict[str, Any] = {
-        "pubStartDate": _NVD_PUB_START,
-        "pubEndDate": _NVD_PUB_END,
+        "pubStartDate": pub_start,
+        "pubEndDate": pub_end,
         "cvssV3Severity": severity,
         "resultsPerPage": _NVD_RESULTS_PER_PAGE,
         "startIndex": start_index,
@@ -104,7 +111,7 @@ def download_nist_cves(force: bool = False) -> Path:
     """Download NVD HIGH+CRITICAL CVEs (2024-01-01 to 2024-09-30) to JSONL.
 
     Skips download if the output file already exists and force is False.
-    Deduplicates by CVE ID across the two severity passes.
+    Deduplicates by CVE ID across all severity × window combinations.
     """
     output_path = _KB_DIR / "nvd_cves.jsonl"
 
@@ -117,61 +124,62 @@ def download_nist_cves(force: bool = False) -> Path:
     records: dict[str, dict[str, Any]] = {}  # CVE ID → record, for dedup
 
     for severity in _NVD_SEVERITIES:
-        start_index = 0
-        log.info(
-            "Fetching NVD CVEs",
-            severity=severity,
-            pub_start=_NVD_PUB_START,
-            pub_end=_NVD_PUB_END,
-        )
-
-        while True:
-            data = _fetch_nvd_page(severity, start_index)
-            total: int = data.get("totalResults", 0)
-            vulnerabilities: list[dict[str, Any]] = data.get("vulnerabilities", [])
-            page_count = len(vulnerabilities)
-
-            for vuln in vulnerabilities:
-                cve: dict[str, Any] = vuln["cve"]
-                cve_id: str = cve["id"]
-
-                if cve_id in records:
-                    continue
-
-                desc = _extract_english_description(cve.get("descriptions", []))
-                if not desc or len(desc) < 30:
-                    continue
-
-                cvss_score: float | None = None
-                metrics: dict[str, Any] = cve.get("metrics", {})
-                for metric_key in ("cvssMetricV31", "cvssMetricV30"):
-                    metric_list = metrics.get(metric_key, [])
-                    if metric_list:
-                        cvss_score = float(metric_list[0]["cvssData"]["baseScore"])
-                        break
-
-                records[cve_id] = {
-                    "id": cve_id,
-                    "description": desc,
-                    "published": str(cve.get("published", ""))[:10],
-                    "severity": severity,
-                    "cvss_score": cvss_score,
-                    "source": "nvd",
-                }
-
-            start_index += page_count
+        for pub_start, pub_end in _NVD_DATE_WINDOWS:
+            start_index = 0
             log.info(
-                "Page complete",
+                "Fetching NVD CVEs",
                 severity=severity,
-                fetched_so_far=start_index,
-                total=total,
-                kept=len(records),
+                pub_start=pub_start,
+                pub_end=pub_end,
             )
 
-            if start_index >= total or page_count == 0:
-                break
+            while True:
+                data = _fetch_nvd_page(severity, start_index, pub_start, pub_end)
+                total: int = data.get("totalResults", 0)
+                vulnerabilities: list[dict[str, Any]] = data.get("vulnerabilities", [])
+                page_count = len(vulnerabilities)
 
-            time.sleep(_NVD_SLEEP_SECS)
+                for vuln in vulnerabilities:
+                    cve: dict[str, Any] = vuln["cve"]
+                    cve_id: str = cve["id"]
+
+                    if cve_id in records:
+                        continue
+
+                    desc = _extract_english_description(cve.get("descriptions", []))
+                    if not desc or len(desc) < 30:
+                        continue
+
+                    cvss_score: float | None = None
+                    metrics: dict[str, Any] = cve.get("metrics", {})
+                    for metric_key in ("cvssMetricV31", "cvssMetricV30"):
+                        metric_list = metrics.get(metric_key, [])
+                        if metric_list:
+                            cvss_score = float(metric_list[0]["cvssData"]["baseScore"])
+                            break
+
+                    records[cve_id] = {
+                        "id": cve_id,
+                        "description": desc,
+                        "published": str(cve.get("published", ""))[:10],
+                        "severity": severity,
+                        "cvss_score": cvss_score,
+                        "source": "nvd",
+                    }
+
+                start_index += page_count
+                log.info(
+                    "Page complete",
+                    severity=severity,
+                    fetched_so_far=start_index,
+                    total=total,
+                    kept=len(records),
+                )
+
+                if start_index >= total or page_count == 0:
+                    break
+
+                time.sleep(_NVD_SLEEP_SECS)
 
     with output_path.open("w", encoding="utf-8") as fh:
         for record in records.values():
@@ -220,8 +228,7 @@ def _save_download_metadata(nvd_record_count: int) -> None:
     metadata: dict[str, Any] = {
         "nvd": {
             "query_params": {
-                "pubStartDate": _NVD_PUB_START,
-                "pubEndDate": _NVD_PUB_END,
+                "date_windows": [list(w) for w in _NVD_DATE_WINDOWS],
                 "severities": list(_NVD_SEVERITIES),
                 "resultsPerPage": _NVD_RESULTS_PER_PAGE,
             },
@@ -323,7 +330,8 @@ def build_index(force: bool = False) -> None:
     embeddings = HuggingFaceEmbeddings(
         model_name="all-MiniLM-L6-v2",
         model_kwargs={"device": device},
-        encode_kwargs={"batch_size": 32, "show_progress_bar": True},
+        encode_kwargs={"batch_size": 32},
+        show_progress=True,
     )
     vectorstore = FAISS.from_documents(chunks, embeddings)
 

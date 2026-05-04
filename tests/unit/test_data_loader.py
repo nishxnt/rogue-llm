@@ -197,6 +197,8 @@ def test_save_download_metadata_writes_valid_json(
     assert metadata_path.exists()
     metadata = json.loads(metadata_path.read_text())
     assert metadata["nvd"]["record_count"] == 750
-    assert metadata["nvd"]["query_params"]["pubStartDate"] == "2024-01-01T00:00:00.000"
+    # date_windows replaced pubStartDate/pubEndDate when NVD window was split into 3 ranges
+    assert len(metadata["nvd"]["query_params"]["date_windows"]) == 3
+    assert metadata["nvd"]["query_params"]["date_windows"][0][0].startswith("2024-01-01")
     assert "HIGH" in metadata["nvd"]["query_params"]["severities"]
     assert "CRITICAL" in metadata["nvd"]["query_params"]["severities"]
