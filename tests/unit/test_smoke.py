@@ -22,5 +22,6 @@ def test_pinned_model_ids() -> None:
 
 def test_observability_keys_optional() -> None:
     s = Settings(groq_api_key="x")
-    assert s.langsmith_api_key is None
-    assert s.wandb_api_key is None
+    # Either None or an empty-string placeholder (from .env with blank values) is acceptable.
+    assert s.langsmith_api_key is None or s.langsmith_api_key.get_secret_value() == ""
+    assert s.wandb_api_key is None or s.wandb_api_key.get_secret_value() == ""

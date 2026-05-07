@@ -20,8 +20,17 @@ dist/
 cache/*
 !cache/.gitkeep
 reports/run_*
+results/*
+!results/.gitkeep
+!results/baseline_ragas.json
 data/knowledge_base/*
 !data/knowledge_base/.gitkeep
+data/index/*
+!data/index/.gitkeep
+data/eval/*
+!data/eval/.gitkeep
+!data/eval/baseline_qa.jsonl
+!data/eval/review_log.md
 
 # Jupyter
 .ipynb_checkpoints/

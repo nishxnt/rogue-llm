@@ -1,0 +1,686 @@
+{
+  "run_at": "2026-05-07T14:03:02.500814+00:00",
+  "model_target": "llama-3.1-8b-instant",
+  "model_judge_configured": "qwen/qwen3-32b",
+  "model_judge_effective": "openai/gpt-oss-120b",
+  "judge_model": "openai/gpt-oss-120b",
+  "run_metadata": {
+    "total_qa": 40,
+    "scored": 40,
+    "errored": 0,
+    "resumed_from_checkpoint": 39
+  },
+  "qa_count": 40,
+  "scored_count": 40,
+  "mean_faithfulness": 0.6333,
+  "by_source": {
+    "nvd": {
+      "mean": 0.6626,
+      "n": 15
+    },
+    "owasp_llm": {
+      "mean": 0.7386,
+      "n": 15
+    },
+    "owasp_web": {
+      "mean": 0.4314,
+      "n": 10
+    }
+  },
+  "by_construction": {
+    "hand-written": {
+      "mean": 0.6347,
+      "n": 21
+    },
+    "semi-synthetic": {
+      "mean": 0.6272,
+      "n": 17
+    },
+    "semi-synthetic-edited": {
+      "mean": 0.6703,
+      "n": 2
+    }
+  },
+  "scores": [
+    {
+      "id": "semi-000",
+      "question": "What is the nature of the vulnerability found in Tenda AC500 2.0.1.9(1307) and how can it be initiated?",
+      "ground_truth": "The vulnerability is a stack-based buffer overflow that affects the function formQuickIndex of the file /goform/QuickIndex, caused by the manipulation of the argument PPPOEPassword, and it can be initiated remotely.",
+      "reference_doc_id": "CVE-2024-3906",
+      "source": "nvd",
+      "construction": "semi-synthetic",
+      "target_answer": "The vulnerability found in Tenda AC500 2.0.1.9(1307) is a critical stack-based buffer overflow vulnerability. This type of vulnerability occurs when a program attempts to store data in a buffer (a region of memory) that is not large enough to hold it, causing the data to overflow into adjacent areas of memory.\n\nThe specific vulnerability affects the function R7WebsSecurityHandler of the file /goform/execCommand. The manipulation of the argument \"password\" leads to the stack-based buffer overflow.\n\nThe attack can be initiated remotely, meaning that an attacker does not need to have physical access to the device to exploit the vulnerability. This is a significant concern, as it allows attackers to potentially compromise the device from anywhere on the internet.\n\nIn terms of the technical details, a stack-based buffer overflow occurs when a program writes data to a buffer on the stack (a region of memory used to store local variables and function call information) without properly checking the size of the data. This can cause the buffer to overflow, allowing an attacker to write arbitrary data to adjacent areas of memory, potentially allowing them to execute malicious code or gain unauthorized access to the device.\n\nIn this case, the vulnerability is likely due to a lack of input validation or sanitization in the R7WebsSecurityHandler function, which allows an attacker to manipulate the \"password\" argument in a way that causes the buffer overflow.",
+      "faithfulness_score": 0.3,
+      "retrieved_doc_ids": [
+        "CVE-2024-2709",
+        "CVE-2024-3905",
+        "CVE-2024-2898",
+        "CVE-2024-0927"
+      ]
+    },
+    {
+      "id": "semi-001",
+      "question": "What is the nature of the security risk posed by the hardcoded HMAC secret in the @evershop/evershop package before version 1.0.0-rc.8?",
+      "ground_truth": "A weak HMAC secret poses a risk because attackers can use the predictable secret to create valid JSON Web Tokens (JWTs), allowing them access to important information and actions within the application.",
+      "reference_doc_id": "CVE-2023-46943",
+      "source": "nvd",
+      "construction": "semi-synthetic",
+      "target_answer": "The security risk posed by the hardcoded HMAC secret in the @evershop/evershop package before version 1.0.0-rc.8 is that it allows attackers to predict and use the secret to create valid JSON Web Tokens (JWTs). This is because a weak or hardcoded HMAC secret is not suitable for generating tokens, as it can be easily guessed or obtained by an attacker.\n\nIn a typical HMAC-based authentication system, the secret key is used to sign tokens, and the recipient verifies the token by re-signing it with the same secret key. However, if the secret key is hardcoded and predictable, an attacker can use it to generate valid tokens, allowing them to access sensitive information and perform actions within the application.\n\nThis type of vulnerability is often referred to as a \"predictable secret\" or \"hardcoded secret\" vulnerability. It is a serious security risk because it allows attackers to bypass authentication and access sensitive data or functionality within the application.\n\nTo mitigate this risk, it is essential to use a strong, randomly generated, and securely stored HMAC secret key. This can be achieved by using a secure random number generator to generate the secret key and storing it securely, such as in an environment variable or a secrets management system.",
+      "faithfulness_score": 0.6,
+      "retrieved_doc_ids": [
+        "CVE-2023-46943",
+        "CVE-2023-46942",
+        "CVE-2024-41651",
+        "CVE-2024-25714"
+      ]
+    },
+    {
+      "id": "semi-002",
+      "question": "What is the potential impact of the untrusted search path vulnerability in B&R APROL versions <= R 4.2.-07P3 and <= R 4.4-00P3?",
+      "ground_truth": "The vulnerability may allow an authenticated local attacker to execute arbitrary code with elevated privileges.",
+      "reference_doc_id": "CVE-2024-5622",
+      "source": "nvd",
+      "construction": "semi-synthetic",
+      "target_answer": "The potential impact of the untrusted search path vulnerability in B&R APROL versions <= R 4.2.-07P3 and <= R 4.4-00P3 is that an authenticated local attacker may be able to execute arbitrary code with elevated privileges.\n\nThis is because the vulnerability allows an attacker to manipulate the search path used by the AprolConfigureCCServices, potentially leading to the execution of malicious code with the privileges of the targeted user. This could result in unauthorized access, data tampering, or other malicious activities.\n\nIn particular, the vulnerability may allow an attacker to:\n\n1. Execute arbitrary code with elevated privileges, potentially leading to unauthorized access or data tampering.\n2. Bypass security restrictions and access sensitive data or systems.\n3. Modify or delete critical system files or configurations.\n4. Install malware or other malicious software on the system.\n\nTo mitigate this vulnerability, it is recommended to update to a version of B&R APROL that is not affected by this issue, or to apply a patch or hotfix provided by the vendor.",
+      "faithfulness_score": 0.18181818181818182,
+      "retrieved_doc_ids": [
+        "CVE-2024-5623",
+        "CVE-2024-5622",
+        "CVE-2020-24682",
+        "CVE-2024-23182"
+      ]
+    },
+    {
+      "id": "semi-003",
+      "question": "What is the potential impact of exploiting the OS command injection vulnerability in Dell PowerProtect Data Manager versions 19.15 and prior?",
+      "ground_truth": "Exploitation may lead to a system take over by an attacker, allowing the execution of arbitrary OS commands on the application's underlying OS, with the privileges of the vulnerable application.",
+      "reference_doc_id": "CVE-2024-22445",
+      "source": "nvd",
+      "construction": "semi-synthetic",
+      "target_answer": "According to the provided context, the potential impact of exploiting the OS command injection vulnerability in Dell PowerProtect Data Manager versions 19.15 and prior is a system takeover by an attacker. This is because a remote high-privileged attacker could potentially exploit this vulnerability, leading to the execution of arbitrary OS commands on the application's underlying OS, with the privileges of the vulnerable application.\n\nIn more technical terms, an attacker could inject malicious OS commands, which would be executed with the privileges of the vulnerable application. This could allow the attacker to gain control over the system, potentially leading to a complete system takeover. This is a critical vulnerability, as it could result in significant damage to the system and its data.\n\nTo mitigate this risk, it is essential to upgrade to a version of Dell PowerProtect Data Manager that is not affected by this vulnerability, such as version 19.16 or later.",
+      "faithfulness_score": 0.8333333333333334,
+      "retrieved_doc_ids": [
+        "CVE-2024-22445",
+        "CVE-2024-37140",
+        "CVE-2023-32462",
+        "CVE-2024-38486"
+      ]
+    },
+    {
+      "id": "semi-004",
+      "question": "What happens to the object ipimap when the execution of diMount(ipimap) fails in the Linux kernel vulnerability CVE-2023-52600?",
+      "ground_truth": "When the execution of diMount(ipimap) fails, the object ipimap that has been released may be accessed in diFreeSpecial() due to asynchronous ipimap release occurring when rcu_core() calls jfs_free_node(), and therefore, sbi->ipimap should not be initialized as ipimap.",
+      "reference_doc_id": "CVE-2023-52600",
+      "source": "nvd",
+      "construction": "semi-synthetic",
+      "target_answer": "According to the provided context, when the execution of diMount(ipimap) fails, the object ipimap that has been released may be accessed in diFreeSpecial(). This is because asynchronous ipimap release occurs when rcu_core() calls jfs_free_node(). \n\nIn other words, the object ipimap is released prematurely, but it may still be accessed later in diFreeSpecial(), which can lead to a use-after-free (UAF) vulnerability.",
+      "faithfulness_score": 0.8,
+      "retrieved_doc_ids": [
+        "CVE-2023-52600",
+        "CVE-2024-45825",
+        "CVE-2024-7515",
+        "CVE-2021-47589"
+      ]
+    },
+    {
+      "id": "semi-006",
+      "question": "What versions of SuiteCRM contain a fix for the remote code execution vulnerability in connectors?",
+      "ground_truth": "Versions 7.14.4 and 8.6.1 contain a fix for this issue, which allows an authenticated user to perform a remote code execution attack prior to these versions.",
+      "reference_doc_id": "CVE-2024-36418",
+      "source": "nvd",
+      "construction": "semi-synthetic",
+      "target_answer": "According to the provided context, versions 7.14.4 and 8.6.1 of SuiteCRM contain a fix for the remote code execution vulnerability in connectors.",
+      "faithfulness_score": 1.0,
+      "retrieved_doc_ids": [
+        "CVE-2024-36418",
+        "CVE-2024-36415",
+        "CVE-2024-36412",
+        "CVE-2024-39568"
+      ]
+    },
+    {
+      "id": "semi-007",
+      "question": "What was the specific issue discovered in Vinchin Backup & Recovery v7.2?",
+      "ground_truth": "Vinchin Backup & Recovery v7.2 was discovered to be configured with default root credentials.",
+      "reference_doc_id": "CVE-2024-22902",
+      "source": "nvd",
+      "construction": "semi-synthetic-edited",
+      "target_answer": "The specific issues discovered in Vinchin Backup & Recovery v7.2 were:\n\n1. Default root credentials were configured, which is a security risk as it allows unauthorized access to the system.\n2. Authenticated remote code execution (RCE) vulnerabilities were found in the following functions:\n   - deleteUpdateAPK\n   - syncNtpTime\n   - setNetworkCardInfo\n\nThese RCE vulnerabilities allow an authenticated attacker to execute arbitrary code on the system, potentially leading to further exploitation and compromise.",
+      "faithfulness_score": 0.5714285714285714,
+      "retrieved_doc_ids": [
+        "CVE-2024-22902",
+        "CVE-2024-22903",
+        "CVE-2024-22899",
+        "CVE-2024-22900"
+      ]
+    },
+    {
+      "id": "semi-009",
+      "question": "What are the potential consequences of exploiting the Stored Cross-Site Scripting Vulnerability in the Dell Secure Connect Gateway Policy Manager?",
+      "ground_truth": "Exploitation may lead to information disclosure, session theft, or client-side request forgery.",
+      "reference_doc_id": "CVE-2024-24906",
+      "source": "nvd",
+      "construction": "semi-synthetic",
+      "target_answer": "Based on the provided context, the potential consequences of exploiting the Stored Cross-Site Scripting (XSS) Vulnerability in the Dell Secure Connect Gateway Policy Manager are:\n\n1. **Information Disclosure**: An attacker could potentially steal sensitive information from the victim user's browser session, such as login credentials, personal data, or confidential business information.\n\n2. **Session Theft**: An attacker could steal the victim user's session cookies or tokens, allowing them to impersonate the user and access sensitive areas of the application or network.\n\n3. **Client-side Request Forgery (CSRF)**: An attacker could trick the victim user's browser into making unintended requests to the vulnerable web application or other web applications, potentially leading to unauthorized actions or data theft.\n\nThese consequences are a result of the malicious code being executed by the web browser in the context of the vulnerable web application, allowing the attacker to manipulate the user's session and interact with the application in an unauthorized manner.",
+      "faithfulness_score": 1.0,
+      "retrieved_doc_ids": [
+        "CVE-2024-24904",
+        "CVE-2024-24905",
+        "CVE-2024-24906",
+        "CVE-2024-24907"
+      ]
+    },
+    {
+      "id": "semi-010",
+      "question": "What happens after the removal of WizardLM in relation to the model's name and potential security risks?",
+      "ground_truth": "An attacker publishes a fake version of the model with the same name but containing malware and backdoors, following the removal of WizardLM, exploiting the interest in this model.",
+      "reference_doc_id": "LLM03_SupplyChain",
+      "source": "owasp_llm",
+      "construction": "semi-synthetic",
+      "target_answer": "After the removal of WizardLM, an attacker exploits the interest in this model and publishes a fake version of the model with the same name but containing malware and backdoors. This action poses significant security risks, as users may unknowingly download and use the compromised model, potentially leading to data breaches, intellectual property theft, or other malicious activities.",
+      "faithfulness_score": 0.375,
+      "retrieved_doc_ids": [
+        "LLM03_SupplyChain",
+        "LLM10_UnboundedConsumption",
+        "CVE-2024-0738",
+        "CVE-2024-1902"
+      ]
+    },
+    {
+      "id": "semi-011",
+      "question": "What type of data should not be contained within the system prompt language and why?",
+      "ground_truth": "Sensitive data such as credentials, connection strings, etc. should not be contained within the system prompt language because the system prompt should not be considered a secret, nor should it be used as a security control.",
+      "reference_doc_id": "LLM07_SystemPromptLeakage",
+      "source": "owasp_llm",
+      "construction": "semi-synthetic",
+      "target_answer": "According to the provided context, sensitive data such as:\n\n1. Credentials\n2. Connection strings\n3. Passwords\n\nshould not be contained within the system prompt language. This is because the system prompt itself is not a security control, and its disclosure does not present the real risk. The security risk lies with the underlying elements, such as sensitive information disclosure, system guardrails bypass, improper separation of privileges, etc.\n\nIncluding sensitive data in the system prompt language can lead to security risks, such as:\n\n* Exposure of sensitive functionality, allowing attackers to bypass strong session management and authorization checks.\n* Storage of sensitive data in a place where it should not be.\n\nIt's essential to separate sensitive data from system prompts to prevent these types of security risks.",
+      "faithfulness_score": 1.0,
+      "retrieved_doc_ids": [
+        "LLM07_SystemPromptLeakage",
+        "LLM07_SystemPromptLeakage",
+        "LLM07_SystemPromptLeakage",
+        "LLM07_SystemPromptLeakage"
+      ]
+    },
+    {
+      "id": "semi-012",
+      "question": "What actions can a chatbot be instructed to perform if it is vulnerable to prompt injection attacks, according to the given scenario?",
+      "ground_truth": "The chatbot can be instructed to ignore previous guidelines, query private data stores, and send emails, leading to unauthorized access and privilege escalation.",
+      "reference_doc_id": "LLM01_PromptInjection",
+      "source": "owasp_llm",
+      "construction": "semi-synthetic",
+      "target_answer": "According to the provided context, a chatbot vulnerable to prompt injection attacks can be instructed to perform the following actions:\n\n1. **Ignore previous guidelines**: This can lead to the chatbot deviating from its intended behavior and potentially causing harm.\n2. **Query private data stores**: This can result in the unauthorized access and disclosure of sensitive information.\n3. **Send emails**: This can lead to the exfiltration of sensitive information or the execution of arbitrary commands in connected systems.\n4. **Insert an image linking to a URL**: This can cause the chatbot to exfiltrate private conversation data.\n5. **Execute arbitrary commands in connected systems**: This can lead to a range of malicious activities, including unauthorized access, privilege escalation, and data exfiltration.\n6. **Manipulate critical decision-making processes**: This can result in the chatbot providing incorrect or biased outputs, leading to harm or financial loss.\n\nThese actions demonstrate the potential severity of prompt injection attacks and the importance of implementing robust security measures to prevent such vulnerabilities.",
+      "faithfulness_score": 0.9166666666666666,
+      "retrieved_doc_ids": [
+        "LLM01_PromptInjection",
+        "LLM01_PromptInjection",
+        "LLM05_ImproperOutputHandling",
+        "LLM09_Misinformation"
+      ]
+    },
+    {
+      "id": "semi-013",
+      "question": "What are some new fine-tuning methods that introduce supply-chain risks for LLMs, and where are they often implemented?",
+      "ground_truth": "Some new fine-tuning methods that introduce supply-chain risks for LLMs are LoRA and PEFT, which are especially implemented on platforms like Hugging Face.",
+      "reference_doc_id": "LLM03_SupplyChain",
+      "source": "owasp_llm",
+      "construction": "semi-synthetic",
+      "target_answer": "According to the provided context, two new fine-tuning methods that introduce supply-chain risks for LLMs are:\n\n1. **Low-Rank Adaptation (LoRA)**: This method is often implemented on platforms like Hugging Face. LoRA is a technique used for fine-tuning pre-trained models, allowing for efficient adaptation to new tasks while preserving the original model's knowledge.\n\n2. **Parameter-Efficient Fine-Tuning (PEFT)**: This method is also often implemented on platforms like Hugging Face. PEFT is another technique used for fine-tuning pre-trained models, aiming to reduce the number of parameters that need to be updated during fine-tuning, making it more efficient.\n\nThese fine-tuning methods can introduce supply-chain risks if the pre-trained models or adapters used in these methods are compromised or tampered with, leading to biased or manipulated outputs.",
+      "faithfulness_score": 0.6666666666666666,
+      "retrieved_doc_ids": [
+        "LLM03_SupplyChain",
+        "LLM03_SupplyChain",
+        "LLM03_SupplyChain",
+        "LLM03_SupplyChain"
+      ]
+    },
+    {
+      "id": "semi-016",
+      "question": "In the context of LLM05 Improper Output Handling, what makes an application vulnerable to indirect prompt injection attacks?",
+      "ground_truth": "The application is vulnerable to indirect prompt injection attacks when it grants the LLM privileges beyond what is intended for end users (enabling escalation of privileges or remote code execution) and has inadequate input validation in 3rd party extensions.",
+      "reference_doc_id": "LLM05_ImproperOutputHandling",
+      "source": "owasp_llm",
+      "construction": "semi-synthetic-edited",
+      "target_answer": "In the context of LLM05 Improper Output Handling, an application is vulnerable to indirect prompt injection attacks if it does not properly validate, sanitize, and handle the outputs generated by large language models (LLMs) before passing them downstream to other components and systems.\n\nMore specifically, the following conditions can increase the risk of indirect prompt injection attacks:\n\n1. **Insufficient validation**: If the application does not validate the outputs generated by the LLM, an attacker may be able to inject malicious content that is not detected by the application.\n2. **Lack of sanitization**: If the application does not sanitize the outputs generated by the LLM, an attacker may be able to inject malicious content that is not removed or modified by the application.\n3. **Inadequate handling of LLM outputs**: If the application does not properly handle the outputs generated by the LLM, an attacker may be able to inject malicious content that is not properly processed or handled by the application.\n\nIn the context of indirect prompt injection attacks, these vulnerabilities can allow an attacker to inject malicious content into the application, which can then be executed or processed by the application, potentially leading to a range of security issues, including:\n\n* Cross-Site Scripting (XSS) and Cross-Site Request Forgery (CSRF) in web browsers\n* Server-Side Request Forgery (SSRF), privilege escalation, or remote code execution on backend systems\n\nTo mitigate these risks, applications should implement robust validation, sanitization, and handling of LLM outputs to prevent indirect prompt injection attacks.",
+      "faithfulness_score": 0.7692307692307693,
+      "retrieved_doc_ids": [
+        "LLM01_PromptInjection",
+        "LLM05_ImproperOutputHandling",
+        "LLM01_PromptInjection",
+        "LLM01_PromptInjection"
+      ]
+    },
+    {
+      "id": "semi-017",
+      "question": "What is recommended for managing ML models used in production to ensure proper governance and access control?",
+      "ground_truth": "Using a centralized ML model inventory or registry is recommended for managing ML models used in production to ensure proper governance and access control.",
+      "reference_doc_id": "LLM10_UnboundedConsumption",
+      "source": "owasp_llm",
+      "construction": "semi-synthetic",
+      "target_answer": "According to the provided context, a centralized ML model inventory or registry is recommended for managing ML models used in production to ensure proper governance and access control. This centralized inventory or registry will help in:\n\n1. Proper governance: By having a centralized inventory, you can keep track of all the models used in production, their versions, and their dependencies. This will help in maintaining a record of all the models and their usage, making it easier to manage and govern them.\n\n2. Access control: A centralized inventory will also help in implementing access controls, such as role-based access control (RBAC), to limit unauthorized access to LLM model repositories and training environments. This will ensure that only authorized personnel have access to the models and their associated resources.\n\nBy using a centralized ML model inventory or registry, you can ensure that your ML models are properly governed and accessed, which is essential for maintaining the integrity and security of your models and the data they process.",
+      "faithfulness_score": 0.5,
+      "retrieved_doc_ids": [
+        "LLM10_UnboundedConsumption",
+        "LLM03_SupplyChain",
+        "LLM03_SupplyChain",
+        "LLM04_DataModelPoisoning"
+      ]
+    },
+    {
+      "id": "semi-018",
+      "question": "What actions should be taken to detect and respond to unusual resource consumption patterns?",
+      "ground_truth": "Continuously monitoring resource usage and implementing logging should be taken to detect and respond to unusual patterns of resource consumption.",
+      "reference_doc_id": "LLM10_UnboundedConsumption",
+      "source": "owasp_llm",
+      "construction": "semi-synthetic",
+      "target_answer": "To detect and respond to unusual resource consumption patterns, the following actions should be taken:\n\n1. **Comprehensive Logging**: Implement logging mechanisms to track resource usage, including CPU, memory, network bandwidth, and disk usage. This will provide a historical record of resource consumption patterns, allowing for the identification of anomalies.\n\n2. **Monitoring**: Continuously monitor resource usage in real-time, using tools such as system monitoring software, network traffic analyzers, or cloud-based monitoring services. This will enable the detection of unusual patterns as they occur.\n\n3. **Anomaly Detection**: Implement anomaly detection algorithms to identify unusual patterns of resource consumption. These algorithms can be based on statistical models, machine learning, or rule-based systems.\n\n4. **Threshold-Based Detection**: Establish thresholds for normal resource consumption patterns and alert on deviations from these thresholds. This can be based on historical data or industry benchmarks.\n\n5. **Alerting and Notification**: Configure alerting and notification systems to notify administrators or security teams of unusual resource consumption patterns. This can be done through email, SMS, or other communication channels.\n\n6. **Incident Response**: Develop an incident response plan to respond to unusual resource consumption patterns. This should include procedures for containment, eradication, recovery, and post-incident activities.\n\n7. **Continuous Analysis**: Continuously analyze resource consumption patterns to refine anomaly detection algorithms and improve the accuracy of alerts.\n\n8. **Integration with Security Information and Event Management (SIEM) Systems**: Integrate resource consumption monitoring with SIEM systems to provide a comprehensive view of security-related events and incidents.\n\n9. **Automated Response**: Automate response actions to unusual resource consumption patterns, such as isolating affected systems, blocking suspicious traffic, or restarting services.\n\n10. **Regular Auditing and Review**: Regularly audit and review resource consumption patterns to identify areas for improvement and optimize resource allocation.\n\nBy taking these actions, organizations can detect and respond to unusual resource consumption patterns, preventing potential security incidents and ensuring the availability and performance of critical systems.\n\nIn the context of the provided context, the following actions from the given context should be taken to detect and respond to unusual resource consumption patterns:\n\n- **Comprehensive Logging, Monitoring and Anomaly Detection** (Section 7)\n- **Rate Limiting** (Section 3)\n- **Timeouts and Throttling** (Section 5)\n- **Resource Allocation Management** (Section 4)\n- **Sandbox Techniques** (Section 6)",
+      "faithfulness_score": 0.2222222222222222,
+      "retrieved_doc_ids": [
+        "CVE-2024-36462",
+        "LLM10_UnboundedConsumption",
+        "CVE-2023-52108",
+        "LLM10_UnboundedConsumption"
+      ]
+    },
+    {
+      "id": "semi-019",
+      "question": "What is a potential risk in a multi-tenant environment where different groups share the same vector database?",
+      "ground_truth": "In a multi-tenant environment where different groups or classes of users share the same vector database, embeddings from one group might be inadvertently retrieved in response to queries from another group\u2019s LLM, potentially leaking sensitive business information.",
+      "reference_doc_id": "LLM08_VectorAndEmbeddingWeaknesses",
+      "source": "owasp_llm",
+      "construction": "semi-synthetic",
+      "target_answer": "In a multi-tenant environment where different groups share the same vector database, a potential risk is that embeddings from one group might be inadvertently retrieved in response to queries from another group's LLM, potentially leaking sensitive business information. This is because the different groups may have different access restrictions, and if not properly managed, the model could retrieve and disclose personal data, proprietary information, or other sensitive content.",
+      "faithfulness_score": 1.0,
+      "retrieved_doc_ids": [
+        "LLM08_VectorAndEmbeddingWeaknesses",
+        "LLM08_VectorAndEmbeddingWeaknesses",
+        "CVE-2024-21136",
+        "CVE-2024-3033"
+      ]
+    },
+    {
+      "id": "semi-022",
+      "question": "What is one factor that contributes to insecure design according to the OWASP Web Top 10 risk categories?",
+      "ground_truth": "The lack of business risk profiling inherent in the software or system being developed, which leads to the failure to determine what level of security design is required.",
+      "reference_doc_id": "A04_2021-Insecure_Design",
+      "source": "owasp_web",
+      "construction": "semi-synthetic",
+      "target_answer": "According to the provided context, one factor that contributes to insecure design is the lack of business risk profiling inherent in the software or system being developed, and thus the failure to determine what level of security design is required.",
+      "faithfulness_score": 1.0,
+      "retrieved_doc_ids": [
+        "A04_2021-Insecure_Design",
+        "LLM00_Preface",
+        "A04_2021-Insecure_Design",
+        "A04_2021-Insecure_Design"
+      ]
+    },
+    {
+      "id": "semi-024",
+      "question": "What actions should be taken when detecting credential stuffing, brute force, or other attacks on login attempts?",
+      "ground_truth": "Log all failures and alert administrators when credential stuffing, brute force, or other attacks are detected, while also limiting or increasingly delaying failed login attempts to prevent these attacks.",
+      "reference_doc_id": "A07_2021-Identification_and_Authentication_Failures",
+      "source": "owasp_web",
+      "construction": "semi-synthetic",
+      "target_answer": "When detecting credential stuffing, brute force, or other attacks on login attempts, the following actions should be taken:\n\n1.  **Log all failures**: Log all failed login attempts, including the username, IP address, and timestamp. This will help in identifying patterns and anomalies in login attempts.\n\n2.  **Alert administrators**: Alert the administrators or security team when credential stuffing, brute force, or other attacks are detected. This will enable them to take immediate action to mitigate the attack.\n\n3.  **Limit or delay failed login attempts**: Limit or increasingly delay failed login attempts to prevent the attacker from making multiple attempts in a short period. However, be careful not to create a denial of service scenario.\n\n4.  **Monitor for patterns**: Monitor the login attempts for patterns such as multiple attempts from the same IP address, attempts with a short interval, or attempts with a specific username.\n\n5.  **Implement rate limiting**: Implement rate limiting to restrict the number of login attempts from a single IP address within a certain time frame.\n\n6.  **Implement IP blocking**: Implement IP blocking to block IP addresses that have exceeded the allowed number of login attempts.\n\n7.  **Analyze login attempts**: Analyze the login attempts to identify the source of the attack and take necessary measures to prevent future attacks.\n\n8.  **Notify users**: Notify users whose accounts have been compromised due to credential stuffing or brute force attacks.\n\n9.  **Update security measures**: Update security measures to prevent similar attacks in the future, such as implementing multi-factor authentication, using a secure password policy, and monitoring login attempts more closely.\n\n10. **Review and improve**: Review the security measures and improve them as needed to prevent similar attacks in the future.\n\nBy taking these actions, you can effectively detect and respond to credential stuffing, brute force, or other attacks on login attempts, and prevent them from compromising your application's security.",
+      "faithfulness_score": 0.26666666666666666,
+      "retrieved_doc_ids": [
+        "A07_2021-Identification_and_Authentication_Failures",
+        "A07_2021-Identification_and_Authentication_Failures",
+        "A07_2021-Identification_and_Authentication_Failures",
+        "A07_2021-Identification_and_Authentication_Failures"
+      ]
+    },
+    {
+      "id": "semi-026",
+      "question": "What can happen if sample applications with known security flaws are not removed from a production server and default accounts are not changed?",
+      "ground_truth": "The attacker can log in with default passwords and take over the server, specifically in this scenario, the admin console, allowing them to compromise the server due to the security misconfiguration.",
+      "reference_doc_id": "A05_2021-Security_Misconfiguration",
+      "source": "owasp_web",
+      "construction": "semi-synthetic",
+      "target_answer": "If sample applications with known security flaws are not removed from a production server and default accounts are not changed, several potential risks and consequences can arise:\n\n1.  **Vulnerability Exploitation**: Sample applications often contain known security vulnerabilities, such as those listed in the Common Weakness Enumeration (CWE) database. If these applications are left on a production server, attackers can exploit these vulnerabilities to gain unauthorized access to the system, potentially leading to data breaches or system compromise.\n\n2.  **Default Account Compromise**: Default accounts, such as those with default usernames and passwords, are often well-known to attackers. If these accounts are not changed, attackers can use these default credentials to gain access to the system, potentially leading to unauthorized access, data breaches, or system compromise.\n\n3.  **Unintended Consequences**: Sample applications may not be designed with security in mind, and their presence on a production server can lead to unintended consequences, such as:\n    *   **Denial of Service (DoS)**: Sample applications can be designed to consume system resources, leading to a denial of service for legitimate users.\n    *   **Data Exposure**: Sample applications may store sensitive data, such as credentials or sensitive information, which can be exposed if the application is compromised.\n    *   **System Compromise**: Sample applications can be used as a vector for attackers to gain access to the system, potentially leading to system compromise.\n\n4.  **Regulatory Compliance Issues**: Leaving sample applications with known security flaws on a production server and not changing default accounts can lead to regulatory compliance issues, such as non-compliance with data protection regulations (e.g., GDPR, HIPAA) or security standards (e.g., PCI-DSS).\n\n5.  **Reputation Damage**: In the event of a security breach or data exposure, the presence of sample applications with known security flaws and default accounts can damage the reputation of the organization, leading to loss of customer trust and potential financial losses.\n\nTo mitigate these risks, it is essential to:\n\n*   Remove sample applications with known security flaws from production servers.\n*   Change default accounts and passwords to strong, unique credentials.\n*   Regularly update and patch applications to ensure they have the latest security fixes.\n*   Implement a robust security configuration process to ensure the security of the system.\n*   Conduct regular security audits and vulnerability assessments to identify and address potential security issues.",
+      "faithfulness_score": 0.0,
+      "retrieved_doc_ids": [
+        "A05_2021-Security_Misconfiguration",
+        "A05_2021-Security_Misconfiguration",
+        "CVE-2024-22442",
+        "CVE-2024-1621"
+      ]
+    },
+    {
+      "id": "hand-000",
+      "question": "Which versions of QNAP Video Station fix the SQL injection vulnerability described in CVE-2023-41287?",
+      "ground_truth": "Video Station 5.7.2 (released 2023/11/23) and later contain the fix for the SQL injection vulnerability.",
+      "reference_doc_id": "CVE-2023-41287",
+      "source": "nvd",
+      "construction": "hand-written",
+      "target_answer": "I don't have enough information in my knowledge base to answer that. The context provided does not mention CVE-2023-41287.",
+      "faithfulness_score": 0.5,
+      "retrieved_doc_ids": [
+        "CVE-2023-47568",
+        "CVE-2023-34974",
+        "CVE-2024-21905",
+        "CVE-2023-47218"
+      ]
+    },
+    {
+      "id": "hand-001",
+      "question": "On affected GL.iNet devices, what specific cookie must an attacker steal to achieve arbitrary code execution, and what file format do they upload?",
+      "ground_truth": "Attackers must steal the AdminToken cookie. They then achieve arbitrary code execution by uploading a crontab-formatted file to a specific directory and waiting for its scheduled execution.",
+      "reference_doc_id": "CVE-2023-50922",
+      "source": "nvd",
+      "construction": "hand-written",
+      "target_answer": "According to the provided context, on affected GL.iNet devices, an attacker must steal the \"AdminToken\" cookie to achieve arbitrary code execution. \n\nOnce the attacker has the AdminToken cookie, they can upload a crontab-formatted file to a specific directory, and wait for its execution, which will allow them to execute arbitrary code.",
+      "faithfulness_score": 1.0,
+      "retrieved_doc_ids": [
+        "CVE-2023-50922",
+        "CVE-2024-39227",
+        "CVE-2024-6145",
+        "CVE-2024-39225"
+      ]
+    },
+    {
+      "id": "hand-002",
+      "question": "What functionality in ManageEngine OpManager 12.7.258 contains the directory traversal vulnerability, and how is it triggered?",
+      "ground_truth": "The directory traversal vulnerability exists in the uploadMib functionality. An attacker triggers it by sending a specially crafted HTTP request containing a malicious MiB file, leading to arbitrary file creation.",
+      "reference_doc_id": "CVE-2023-47211",
+      "source": "nvd",
+      "construction": "hand-written",
+      "target_answer": "According to the provided context, the directory traversal vulnerability exists in the \"uploadMib\" functionality of ManageEngine OpManager 12.7.258. This vulnerability can be triggered by sending a specially crafted HTTP request. Specifically, an attacker can send a malicious MiB file to exploit this vulnerability.\n\nIn more technical terms, the vulnerability arises due to a lack of proper input validation and sanitization in the \"uploadMib\" functionality. This allows an attacker to manipulate the file path and create arbitrary files on the system, potentially leading to further exploitation.\n\nTo trigger this vulnerability, an attacker would need to craft a malicious HTTP request that targets the \"uploadMib\" functionality, likely by manipulating the file path or name in the request. This could involve using directory traversal patterns, such as \"..\" or \"../\", to navigate outside of the intended directory and create files in arbitrary locations.\n\nIt's worth noting that this type of vulnerability is often referred to as a \"path traversal\" or \"directory traversal\" vulnerability, and it can be exploited to gain unauthorized access to sensitive files or directories on the system.",
+      "faithfulness_score": 0.375,
+      "retrieved_doc_ids": [
+        "CVE-2023-47211",
+        "CVE-2024-2083",
+        "CVE-2024-6791",
+        "CVE-2024-5735"
+      ]
+    },
+    {
+      "id": "hand-003",
+      "question": "What is the root cause of the information disclosure issue in the PayHere Payment Gateway WordPress plugin before version 2.2.12?",
+      "ground_truth": "The plugin automatically creates publicly-accessible log files containing sensitive information whenever transactions occur.",
+      "reference_doc_id": "CVE-2023-6064",
+      "source": "nvd",
+      "construction": "hand-written",
+      "target_answer": "The root cause of the information disclosure issue in the PayHere Payment Gateway WordPress plugin before version 2.2.12 is that it automatically creates publicly-accessible log files containing sensitive information when transactions occur. \n\nThis means that the plugin is not properly handling sensitive data, such as transaction information, and is storing it in log files that are accessible to anyone with the URL to the log file. This allows unauthorized users to access sensitive information, potentially leading to a data breach or other security issues.\n\nIn more technical terms, the issue is likely due to a lack of proper access controls and data encryption on the log files, allowing anyone to access and potentially read the sensitive information stored within them.",
+      "faithfulness_score": 0.3333333333333333,
+      "retrieved_doc_ids": [
+        "CVE-2023-6064",
+        "CVE-2024-6205",
+        "CVE-2024-1108",
+        "CVE-2024-0705"
+      ]
+    },
+    {
+      "id": "hand-004",
+      "question": "Why is the Debug Log Manager WordPress plugin (before 2.3.0) considered insecure with respect to authorization?",
+      "ground_truth": "It contains a directory listing vulnerability that allows the debug log to be downloaded without authorization, granting access to sensitive data.",
+      "reference_doc_id": "CVE-2023-6383",
+      "source": "nvd",
+      "construction": "hand-written",
+      "target_answer": "The Debug Log Manager WordPress plugin before 2.3.0 is considered insecure with respect to authorization due to a Directory listing vulnerability. This vulnerability allows unauthorized access to the debug log, which can contain sensitive data.\n\nIn other words, the plugin does not properly restrict access to the debug log, making it possible for attackers to download the log without proper authorization. This can lead to exposure of sensitive information, such as user credentials, API keys, or other confidential data.\n\nThis type of vulnerability is a classic example of a Missing Authorization vulnerability, where the plugin fails to enforce proper access controls, allowing unauthorized access to sensitive data or functionality.",
+      "faithfulness_score": 0.7777777777777778,
+      "retrieved_doc_ids": [
+        "CVE-2023-6383",
+        "CVE-2024-35669",
+        "CVE-2023-6036",
+        "CVE-2024-1108"
+      ]
+    },
+    {
+      "id": "hand-005",
+      "question": "Under what circumstances can the Perl-on-Windows vulnerability described in CVE-2023-47039 lead to arbitrary code execution?",
+      "ground_truth": "Because Perl for Windows looks for cmd.exe in the current working directory before searching the system path, an attacker with limited privileges can place a malicious cmd.exe in a location with weak permissions (such as C:\\ProgramData) and have it executed when an administrator runs a Perl interpreter.",
+      "reference_doc_id": "CVE-2023-47039",
+      "source": "nvd",
+      "construction": "hand-written",
+      "target_answer": "I don't have enough information in my knowledge base to answer that. The provided context does not contain information about CVE-2023-47039. However, it does contain information about a Perl-on-Windows vulnerability, but it is described in a different CVE (no CVE-2023-47039 is mentioned, but CVE-2024-7513 is mentioned).",
+      "faithfulness_score": 0.6666666666666666,
+      "retrieved_doc_ids": [
+        "CVE-2024-7513",
+        "CVE-2023-47039",
+        "CVE-2024-45824",
+        "CVE-2024-45826"
+      ]
+    },
+    {
+      "id": "hand-006",
+      "question": "How can a malicious APK gain root permission on devices running KernelSU versions 0.7.1 and prior?",
+      "ground_truth": "The logic of get apk path in the KernelSU kernel module can be bypassed: any malicious APK named me.weishu.kernelsu (matching the official KernelSU Manager package name) can take over root privileges if installed on a device with a KernelSU module.",
+      "reference_doc_id": "CVE-2023-49794",
+      "source": "nvd",
+      "construction": "hand-written",
+      "target_answer": "According to the provided context, a malicious APK can gain root permission on devices running KernelSU versions 0.7.1 and prior by exploiting a vulnerability in the logic of getting the APK path in the KernelSU kernel module. \n\nSpecifically, if a malicious APK is named `me.weishu.kernelsu` and is installed on a device with a KernelSU module installed, it can bypass the intended checks and gain root privileges on the device. This is because the logic of getting the APK path can be bypassed, allowing the malicious APK to take over root privileges.",
+      "faithfulness_score": 1.0,
+      "retrieved_doc_ids": [
+        "CVE-2023-49794",
+        "CVE-2024-40828",
+        "CVE-2024-27848",
+        "CVE-2023-50921"
+      ]
+    },
+    {
+      "id": "hand-007",
+      "question": "What is the difference between direct and indirect prompt injection attacks against an LLM?",
+      "ground_truth": "Direct prompt injection occurs when a user's input directly alters the behavior of the LLM in unintended ways (for example, by overriding the system prompt). Indirect prompt injection occurs when malicious instructions are embedded in external content (such as a web page or document) that the LLM ingests, causing it to act on attacker-controlled instructions without the user's awareness.",
+      "reference_doc_id": "LLM01_PromptInjection",
+      "source": "owasp_llm",
+      "construction": "hand-written",
+      "target_answer": "Direct and indirect prompt injection attacks against a Large Language Model (LLM) differ in the source and nature of the input that triggers the attack.\n\n**Direct Prompt Injections:**\n\nDirect prompt injections occur when a user's input directly alters the behavior of the model in unintended or unexpected ways. This input is typically provided by the user through the model's interface, such as a chat or text input field. The input can be either intentional (i.e., a malicious actor deliberately crafting a prompt to exploit the model) or unintentional (i.e., a user inadvertently providing input that triggers unexpected behavior).\n\nExamples of direct prompt injections include:\n\n- An attacker injecting a malicious prompt into a customer support chatbot.\n- A user accidentally providing input that causes the model to disregard its safety protocols.\n\n**Indirect Prompt Injections:**\n\nIndirect prompt injections occur when an LLM accepts input from external sources, such as websites or files. The external source may have content data that, when interpreted by the model, alters the behavior of the model in unintended or unexpected ways. Like direct injections, indirect injections can be either intentional or unintentional.\n\nExamples of indirect prompt injections include:\n\n- A user employing an LLM to summarize a webpage containing hidden instructions that cause the LLM to insert an image linking to a URL.\n- A company including an instruction in a job description that is used by an applicant to optimize their resume, inadvertently triggering the AI detection.\n\nIn summary, the key difference between direct and indirect prompt injection attacks is the source of the input that triggers the attack:\n\n- Direct prompt injections involve user input provided directly to the model.\n- Indirect prompt injections involve input from external sources, such as websites or files, that is interpreted by the model.\n\nBoth types of attacks can have significant consequences, including disclosure of sensitive information, content manipulation, and unauthorized access to functions available to the LLM.",
+      "faithfulness_score": 0.875,
+      "retrieved_doc_ids": [
+        "LLM01_PromptInjection",
+        "LLM01_PromptInjection",
+        "LLM01_PromptInjection",
+        "LLM01_PromptInjection"
+      ]
+    },
+    {
+      "id": "hand-008",
+      "question": "What types of sensitive information are most commonly at risk of disclosure through an LLM application, and what is the primary mitigation?",
+      "ground_truth": "Sensitive information at risk includes personally identifiable information (PII), financial details, health records, confidential business data, security credentials, and proprietary algorithms or model weights. The primary mitigation is robust data sanitization to scrub sensitive content from training data and from runtime inputs/outputs, combined with strict access controls.",
+      "reference_doc_id": "LLM02_SensitiveInformationDisclosure",
+      "source": "owasp_llm",
+      "construction": "hand-written",
+      "target_answer": "Based on the provided context, the types of sensitive information most commonly at risk of disclosure through an LLM application are:\n\n1. **Personal Identifiable Information (PII)**: This includes personal details such as names, addresses, phone numbers, and financial information.\n2. **Proprietary Algorithms or Data**: This includes sensitive information about the model's training methods, source code, or confidential business data.\n3. **Sensitive Business Data**: This includes confidential information about a company's operations, customers, or financials.\n\nThe primary mitigation strategy to prevent sensitive information disclosure through an LLM application is **Data Sanitization**. This involves scrubbing or masking sensitive content before it is used in training the model. By implementing data sanitization techniques, you can prevent user data from entering the training model, reducing the risk of sensitive information disclosure.\n\nData sanitization can be achieved through various methods, such as:\n\n* Masking or replacing sensitive information with generic or fictional data\n* Removing or redacting sensitive information from input data\n* Using encryption or tokenization to protect sensitive information\n* Implementing access controls and authentication mechanisms to restrict access to sensitive data\n\nBy integrating data sanitization techniques into your LLM application, you can significantly reduce the risk of sensitive information disclosure and protect your users' data.",
+      "faithfulness_score": 0.4166666666666667,
+      "retrieved_doc_ids": [
+        "LLM02_SensitiveInformationDisclosure",
+        "LLM02_SensitiveInformationDisclosure",
+        "LLM07_SystemPromptLeakage",
+        "LLM02_SensitiveInformationDisclosure"
+      ]
+    },
+    {
+      "id": "hand-009",
+      "question": "Why are open-source model hubs like Hugging Face considered a supply chain risk for LLM applications?",
+      "ground_truth": "Models on open hubs may have been manipulated through tampering or poisoning attacks. A concrete example from the OWASP supply-chain scenarios: following the removal of WizardLM, an attacker published a fake version of the model with the same name but containing malware and backdoors. Pre-trained models are binary black boxes that offer little to no security assurance from static inspection, so they can contain hidden biases or backdoors that go undetected.",
+      "reference_doc_id": "LLM03_SupplyChain",
+      "source": "owasp_llm",
+      "construction": "hand-written",
+      "target_answer": "Open-source model hubs like Hugging Face are considered a supply chain risk for LLM applications due to several reasons:\n\n1. **Lack of Control and Verification**: When an LLM application uses pre-trained models from a hub like Hugging Face, the developers may not have complete control over the model's source code, training data, or fine-tuning process. This lack of control makes it challenging to verify the model's integrity and ensure that it doesn't contain any malicious code or biases.\n\n2. **Tampering and Poisoning Attacks**: As mentioned in the context, attackers can tamper with or poison the models hosted on these hubs, which can lead to biased outputs, security breaches, or system failures. This is particularly concerning when popular models are fine-tuned or merged with other models, as seen in Scenarios #3 and #7.\n\n3. **Increased Attack Surface**: Open-source model hubs like Hugging Face provide a platform for collaborative model development and sharing. While this facilitates innovation and accelerates model development, it also increases the attack surface. Attackers can exploit vulnerabilities in the shared models, model merging services, or even the hub's infrastructure itself.\n\n4. **Dependence on Third-Party Models**: LLM applications often rely on pre-trained models from these hubs, which can create a dependency on third-party components. This dependency can lead to supply chain risks, as seen in Scenario #4, where a compromised pre-trained model introduces malicious code.\n\n5. **Lack of Transparency and Accountability**: Open-source model hubs may not always provide clear information about the models' origins, training data, or fine-tuning processes. This lack of transparency makes it difficult to hold anyone accountable for any issues that arise from using these models.\n\nTo mitigate these risks, it's essential to implement robust security measures, such as:\n\n* Thoroughly verifying the models' integrity and source code\n* Regularly updating and patching dependencies\n* Implementing secure model merging and fine-tuning practices\n* Monitoring model performance and behavior\n* Establishing clear data privacy policies and terms of service\n\nBy being aware of these risks and taking proactive measures, developers can minimize the supply chain risks associated with open-source model hubs like Hugging Face.",
+      "faithfulness_score": 0.6538461538461539,
+      "retrieved_doc_ids": [
+        "LLM03_SupplyChain",
+        "LLM03_SupplyChain",
+        "LLM03_SupplyChain",
+        "LLM03_SupplyChain"
+      ]
+    },
+    {
+      "id": "hand-010",
+      "question": "What is data poisoning in the context of LLMs, and during which lifecycle stages can it occur?",
+      "ground_truth": "Data poisoning is the deliberate manipulation of training, fine-tuning, or embedding data to introduce vulnerabilities, backdoors, or biases into a model. It can occur during pre-training, fine-tuning, embedding generation, and any stage where external or third-party data is incorporated into the model.",
+      "reference_doc_id": "LLM04_DataModelPoisoning",
+      "source": "owasp_llm",
+      "construction": "hand-written",
+      "target_answer": "In the context of Large Language Models (LLMs), data poisoning refers to the manipulation of pre-training, fine-tuning, or embedding data to introduce vulnerabilities, backdoors, or biases. This manipulation can compromise the model's security, performance, or ethical behavior, leading to harmful outputs or impaired capabilities.\n\nData poisoning can occur during different stages of the LLM lifecycle, including:\n\n1. **Pre-training**: This is the initial stage where the model is trained on a large dataset to learn general knowledge and patterns. Data poisoning during pre-training can occur when the training data is manipulated to introduce biases or vulnerabilities.\n2. **Fine-tuning**: This stage involves adapting the pre-trained model to a specific task or domain. Data poisoning during fine-tuning can occur when the fine-tuning data is manipulated to introduce backdoors or biases.\n3. **Embedding**: This stage involves converting text into numerical vectors that can be processed by the model. Data poisoning during embedding can occur when the input data is manipulated to introduce vulnerabilities or biases.\n4. **Transfer learning**: This stage involves reusing a pre-trained model on a new task. Data poisoning during transfer learning can occur when the new data is manipulated to introduce vulnerabilities or biases.\n\nData poisoning is considered an integrity attack since tampering with training data impacts the model's ability to make accurate predictions. The risks are particularly high with external data sources, which may contain unverified or malicious content.",
+      "faithfulness_score": 0.9230769230769231,
+      "retrieved_doc_ids": [
+        "LLM04_DataModelPoisoning",
+        "LLM04_DataModelPoisoning",
+        "LLM10_UnboundedConsumption",
+        "CVE-2024-22422"
+      ]
+    },
+    {
+      "id": "hand-011",
+      "question": "Why is treating an LLM's output as untrusted important when the output is passed downstream to other systems?",
+      "ground_truth": "Because LLM output may have been influenced by prompt injection or other manipulation, passing it directly to downstream components without validation can result in XSS and CSRF in web browsers, as well as SSRF, privilege escalation, or remote code execution on backend systems. The fix is to treat the model as any other untrusted user and apply input validation on responses coming from the model to backend functions.",
+      "reference_doc_id": "LLM05_ImproperOutputHandling",
+      "source": "owasp_llm",
+      "construction": "hand-written",
+      "target_answer": "Treating an LLM's output as untrusted is crucial when the output is passed downstream to other systems for several reasons:\n\n1. **Indirect Prompt Injection Attacks**: As mentioned in the context, indirect prompt injection attacks can allow an attacker to gain privileged access to a target user's environment. If the LLM's output is not properly validated and sanitized, an attacker could inject malicious code or prompts that would be executed by the downstream system, potentially leading to privilege escalation or remote code execution.\n\n2. **XSS and CSRF Vulnerabilities**: When LLM-generated content is passed to a web browser, it can lead to XSS (Cross-Site Scripting) and CSRF (Cross-Site Request Forgery) vulnerabilities. If the output is not properly encoded, an attacker could inject malicious JavaScript or HTML code that would be executed by the browser, potentially leading to unauthorized access or data theft.\n\n3. **SSRF, Privilege Escalation, or Remote Code Execution**: When LLM-generated content is passed to a backend system, it can lead to SSRF (Server-Side Request Forgery), privilege escalation, or remote code execution vulnerabilities. If the output is not properly validated and sanitized, an attacker could inject malicious requests or code that would be executed by the backend system, potentially leading to unauthorized access or data theft.\n\n4. **Model Poisoning and Tampering**: As mentioned in the context, LLM supply chains are susceptible to various vulnerabilities, including model poisoning and tampering attacks. If an attacker can manipulate the LLM's output, they could potentially inject malicious code or data that would be executed by the downstream system, potentially leading to unauthorized access or data theft.\n\nTo mitigate these risks, it's essential to treat the LLM's output as untrusted and perform proper validation, sanitization, and encoding before passing it downstream to other systems. This includes:\n\n* Validating the output against known good data or patterns\n* Sanitizing the output to remove any malicious code or characters\n* Encoding the output to prevent XSS and CSRF attacks\n* Implementing proper input validation and error handling in downstream systems\n* Monitoring and logging LLM outputs to detect any suspicious activity\n\nBy treating the LLM's output as untrusted and taking these precautions, you can help ensure the security and integrity of your downstream systems and prevent potential attacks.",
+      "faithfulness_score": 0.9375,
+      "retrieved_doc_ids": [
+        "LLM05_ImproperOutputHandling",
+        "LLM05_ImproperOutputHandling",
+        "LLM03_SupplyChain",
+        "LLM03_SupplyChain"
+      ]
+    },
+    {
+      "id": "hand-012",
+      "question": "What is excessive agency in an LLM-based system, and what are the primary mitigations?",
+      "ground_truth": "Excessive agency is the vulnerability that arises when an LLM is granted too much functionality, too many permissions, or too much autonomy \u2014 allowing it to take damaging actions in response to unexpected, ambiguous, or manipulated outputs. Primary mitigations include limiting the tools, functions, and permissions available to the LLM to the minimum required, and requiring human approval for high-impact actions.",
+      "reference_doc_id": "LLM06_ExcessiveAgency",
+      "source": "owasp_llm",
+      "construction": "hand-written",
+      "target_answer": "Excessive Agency in an LLM-based system refers to the vulnerability that enables damaging actions to be performed in response to unexpected, ambiguous, or manipulated outputs from the LLM, regardless of what is causing the LLM to malfunction. This occurs when the LLM is granted a degree of agency, allowing it to call functions or interface with other systems via extensions, and the decision over which extension to invoke is delegated to the LLM.\n\nThe primary mitigations for Excessive Agency are:\n\n1. **Minimize extensions**: Limit the extensions that LLM agents are allowed to call to only the minimum necessary. This means that if an LLM-based system does not require the ability to fetch the contents of a URL, then such an extension should not be offered to the LLM agent.\n\n2. **Minimize extension functionality**: Limit the functions that are implemented in LLM extensions to the minimum necessary. For example, an extension that accesses a user's mailbox to summarize emails may only require the ability to read emails, so the extension should not contain other functionality such as deleting or sending messages.\n\n3. **Avoid open-ended extensions**: Ensure that LLM extensions do not have open-ended functionality that can be exploited by the LLM.\n\nAdditionally, the following mitigations can help prevent Excessive Agency:\n\n4. **Limit excessive permissions**: An LLM extension should not have permissions on downstream systems that are not needed for the intended operation of the application.\n\n5. **Avoid excessive autonomy**: An LLM-based application or extension should independently verify and approve high-impact actions before performing them.\n\nBy implementing these mitigations, you can reduce the risk of Excessive Agency in your LLM-based system and prevent damaging actions from being performed in response to unexpected or manipulated LLM outputs.",
+      "faithfulness_score": 0.8947368421052632,
+      "retrieved_doc_ids": [
+        "LLM06_ExcessiveAgency",
+        "LLM06_ExcessiveAgency",
+        "LLM06_ExcessiveAgency",
+        "LLM06_ExcessiveAgency"
+      ]
+    },
+    {
+      "id": "hand-013",
+      "question": "What kinds of information should never be placed in an LLM system prompt, and why is the system prompt itself not a security control?",
+      "ground_truth": "Credentials, API keys, connection strings, and other secrets must never be placed in the system prompt. The system prompt should not be considered confidential because it can be leaked through paraphrase attacks, indirect prompt injection, or model behavior, so it cannot serve as a security control on its own.",
+      "reference_doc_id": "LLM07_SystemPromptLeakage",
+      "source": "owasp_llm",
+      "construction": "hand-written",
+      "target_answer": "According to the provided context, the following types of information should never be placed in an LLM system prompt:\n\n1. **Sensitive data**: This includes credentials (e.g., API keys, auth keys), database names, user roles, permission structures, and connection strings. These types of information should be externalized to systems that the model does not directly access.\n\n2. **API keys and auth keys**: These are used for authentication and authorization purposes and should not be embedded in system prompts.\n\n3. **Database names**: Including database names in system prompts can compromise the security of the database.\n\n4. **User roles and permission structures**: These should not be stored in system prompts, as they can be used to bypass strong session management and authorization checks.\n\nThe system prompt itself is not a security control for several reasons:\n\n1. **Lack of determinism**: System prompts can be altered or manipulated by attackers through prompt injection attacks, which can change the behavior of the LLM.\n\n2. **Non-auditable behavior**: The behavior of the LLM is controlled by the system prompt, which can lead to non-deterministic and non-auditable behavior.\n\n3. **Dependence on external systems**: Critical security controls, such as privilege separation, authorization bounds checks, and similar, should not be delegated to the LLM. These controls need to occur in a deterministic, auditable manner, which LLMs are not conducive to.\n\nIn summary, the system prompt is not a security control because it can be manipulated, its behavior is non-deterministic, and it relies on external systems for critical security controls.",
+      "faithfulness_score": 0.9285714285714286,
+      "retrieved_doc_ids": [
+        "LLM07_SystemPromptLeakage",
+        "LLM07_SystemPromptLeakage",
+        "LLM07_SystemPromptLeakage",
+        "LLM07_SystemPromptLeakage"
+      ]
+    },
+    {
+      "id": "hand-014",
+      "question": "What is broken access control, and what is one common defensive practice for preventing it?",
+      "ground_truth": "Broken access control occurs when restrictions on what authenticated users are allowed to do are not properly enforced, leading to unauthorized information disclosure, modification, or destruction of data. A common defense is to deny access by default (except for public resources) and to enforce access controls server-side rather than relying on client-side checks.",
+      "reference_doc_id": "A01_2021-Broken_Access_Control",
+      "source": "owasp_web",
+      "construction": "hand-written",
+      "target_answer": "**Broken Access Control**\n\nBroken Access Control is a type of security vulnerability that occurs when an application, system, or service fails to enforce proper access controls, allowing unauthorized users to access, modify, or delete sensitive data or perform actions outside their intended permissions. This can lead to unauthorized information disclosure, modification, or destruction of data, or performing a business function outside the user's limits.\n\n**Common Defensive Practice: Deny by Default**\n\nOne common defensive practice for preventing Broken Access Control is to implement a \"deny by default\" policy. This means that access to resources, data, or functionality should be denied by default, and only granted on a need-to-know basis. In other words, access should only be granted for specific capabilities, roles, or users, and not available to anyone by default.\n\nBy implementing a deny by default policy, developers can ensure that access controls are enforced properly, and unauthorized users are prevented from accessing sensitive data or performing actions outside their intended permissions. This practice can help prevent Broken Access Control vulnerabilities and reduce the risk of security breaches.",
+      "faithfulness_score": 1.0,
+      "retrieved_doc_ids": [
+        "A01_2021-Broken_Access_Control",
+        "A01_2021-Broken_Access_Control",
+        "A09_2021-Security_Logging_and_Monitoring_Failures",
+        "CVE-2024-33921"
+      ]
+    },
+    {
+      "id": "hand-015",
+      "question": "Why is the use of weak or outdated cryptographic algorithms a security risk, and what is the recommended approach for protecting data at rest?",
+      "ground_truth": "Weak or outdated algorithms (such as MD5, SHA1, or DES) can be broken by modern attackers, exposing protected data. Data at rest should be encrypted using strong, current algorithms with proper key management, and only data that genuinely needs to be retained should be stored.",
+      "reference_doc_id": "A02_2021-Cryptographic_Failures",
+      "source": "owasp_web",
+      "construction": "hand-written",
+      "target_answer": "The use of weak or outdated cryptographic algorithms is a security risk because they can be easily broken or compromised by attackers. Cryptographic algorithms are designed to provide confidentiality, integrity, and authenticity of data, but if they are weak or outdated, they can be vulnerable to various attacks.\n\nHere are some reasons why weak or outdated cryptographic algorithms are a security risk:\n\n1. **Brute-force attacks**: Weak algorithms can be broken using brute-force attacks, where an attacker tries all possible combinations of keys or passwords.\n2. **Side-channel attacks**: Weak algorithms can be vulnerable to side-channel attacks, which exploit information about the implementation of the algorithm, such as timing or power consumption.\n3. **Key recovery**: Weak algorithms can be vulnerable to key recovery attacks, where an attacker tries to recover the key used for encryption.\n4. **Cryptanalysis**: Weak algorithms can be vulnerable to cryptanalysis, where an attacker uses mathematical techniques to break the encryption.\n\nTo protect data at rest, the recommended approach is to use strong and up-to-date cryptographic algorithms, such as:\n\n1. **AES (Advanced Encryption Standard)**: AES is a widely used symmetric-key block cipher that is considered secure.\n2. **RSA (Rivest-Shamir-Adleman)**: RSA is a widely used asymmetric-key algorithm that is considered secure for key exchange and digital signatures.\n3. **Elliptic Curve Cryptography (ECC)**: ECC is a type of public-key cryptography that is considered secure and efficient.\n4. **PBKDF2 (Password-Based Key Derivation Function 2)**: PBKDF2 is a password-based key derivation function that is considered secure for password storage.\n\nIn addition to using strong algorithms, it's also important to follow best practices for key management, such as:\n\n1. **Key rotation**: Regularly rotate keys to prevent key compromise.\n2. **Key storage**: Store keys securely, such as in a Hardware Security Module (HSM) or a secure key store.\n3. **Key sharing**: Limit key sharing to only those who need access to the data.\n4. **Key revocation**: Regularly revoke keys that are no longer needed or have been compromised.\n\nBy following these best practices, you can protect your data at rest and prevent security risks associated with weak or outdated cryptographic algorithms.\n\nReferences:\n\n* NIST Special Publication 800-57: Recommendation for Key Management\n* OWASP Cryptography Cheat Sheet\n* ASVS Crypto (V7)",
+      "faithfulness_score": 0.35294117647058826,
+      "retrieved_doc_ids": [
+        "A02_2021-Cryptographic_Failures",
+        "A02_2021-Cryptographic_Failures",
+        "A02_2021-Cryptographic_Failures",
+        "A02_2021-Cryptographic_Failures"
+      ]
+    },
+    {
+      "id": "hand-016",
+      "question": "How does a SQL injection attack work, and what is the primary defense?",
+      "ground_truth": "SQL injection occurs when untrusted user input is incorporated into a SQL query without proper escaping or parameterization, allowing the attacker to alter the query's logic and read, modify, or destroy data. The primary defense is the use of parameterized queries (prepared statements), which separate query structure from user-supplied values.",
+      "reference_doc_id": "A03_2021-Injection",
+      "source": "owasp_web",
+      "construction": "hand-written",
+      "target_answer": "A SQL injection (SQLi) attack is a type of web application security vulnerability that allows an attacker to inject malicious SQL code into a web application's database. This can be done by manipulating user input, such as form data or query parameters, to execute arbitrary SQL commands.\n\nHere's a step-by-step explanation of how a SQL injection attack works:\n\n1. **Vulnerable Web Application**: A web application uses user input to construct SQL queries. This input is not properly sanitized or validated, allowing an attacker to manipulate the input.\n2. **Malicious Input**: An attacker sends malicious input to the web application, which is designed to inject malicious SQL code into the database query.\n3. **SQL Query Construction**: The web application constructs the SQL query using the malicious input. The query is executed on the database, allowing the attacker to inject malicious SQL code.\n4. **Malicious SQL Execution**: The malicious SQL code is executed on the database, allowing the attacker to extract or modify sensitive data, or even execute system-level commands.\n\nThe primary defense against SQL injection attacks is to use **parameterized queries** or **prepared statements**. This involves separating the SQL code from the user input, ensuring that the input is treated as a parameter rather than part of the SQL code.\n\nHere's an example of a vulnerable query:\n```sql\nSELECT * FROM users WHERE username = ' + username + ' AND password = ' + password + ';\n```\nIn this example, the `username` and `password` variables are concatenated directly into the SQL query, allowing an attacker to inject malicious SQL code.\n\nTo defend against this, use a parameterized query:\n```sql\nSELECT * FROM users WHERE username = ? AND password = ?;\n```\nIn this example, the `?` placeholders are used to separate the SQL code from the user input. The input is treated as a parameter, rather than part of the SQL code.\n\nAdditionally, other defenses include:\n\n* **Input validation**: Validate user input to ensure it conforms to expected formats and patterns.\n* **Sanitization**: Sanitize user input to remove any malicious characters or code.\n* **Least Privilege**: Ensure that database users have the minimum privileges required to perform their tasks.\n* **Regular Updates**: Regularly update and patch web applications and databases to ensure they have the latest security fixes.\n\nBy using parameterized queries and implementing these additional defenses, you can significantly reduce the risk of SQL injection attacks.",
+      "faithfulness_score": 0.0,
+      "retrieved_doc_ids": [
+        "CVE-2024-29828",
+        "CVE-2024-29829",
+        "CVE-2024-29830",
+        "CVE-2024-29846"
+      ]
+    },
+    {
+      "id": "hand-017",
+      "question": "What distinguishes insecure design from a typical implementation flaw?",
+      "ground_truth": "Insecure design is a broad category representing missing or ineffective control design \u2014 issues that cannot be fixed by a perfect implementation because the needed security controls were never created to defend against specific attacks. Implementation defects, by contrast, can occur within an otherwise secure design and have different root causes and remediation.",
+      "reference_doc_id": "A04_2021-Insecure_Design",
+      "source": "owasp_web",
+      "construction": "hand-written",
+      "target_answer": "Insecure design and implementation flaws are two distinct categories of weaknesses, each with different root causes and remediation approaches.\n\nInsecure design refers to a broad category of weaknesses that arise from missing or ineffective control design. This means that the security controls or mechanisms required to defend against specific attacks were never created or were designed inadequately. Insecure design is not just about the implementation of security controls but rather the lack of them in the first place.\n\nOn the other hand, implementation flaws are defects that occur during the implementation of a secure design. These flaws can arise from various factors, such as coding errors, misconfiguration, or incorrect usage of security controls. Implementation flaws can still lead to vulnerabilities that may be exploited, but they do not stem from the fundamental design of the system.\n\nTo illustrate the difference, consider a building with a flawed design (insecure design) versus a building with a secure design but poor construction (implementation flaw). A building with a flawed design may have structural weaknesses that cannot be fixed by simply patching or repairing the building. In contrast, a building with a secure design but poor construction may have issues that can be addressed through repairs or renovations.\n\nIn summary, the key distinction between insecure design and implementation flaws is that insecure design refers to the lack or inadequacy of security controls in the design, whereas implementation flaws arise from defects in the implementation of a secure design.",
+      "faithfulness_score": 0.6923076923076923,
+      "retrieved_doc_ids": [
+        "A04_2021-Insecure_Design",
+        "A04_2021-Insecure_Design",
+        "A08_2021-Software_and_Data_Integrity_Failures",
+        "A05_2021-Security_Misconfiguration"
+      ]
+    },
+    {
+      "id": "hand-018",
+      "question": "What are common examples of security misconfiguration that can lead to system compromise?",
+      "ground_truth": "Common examples include unchanged default accounts and passwords, unnecessary features being enabled (such as open ports, services, or sample applications), unpatched flaws, overly verbose error messages revealing stack traces, and missing security headers. An attacker can exploit such misconfigurations \u2014 for instance, logging in with default credentials to take over an admin console.",
+      "reference_doc_id": "A05_2021-Security_Misconfiguration",
+      "source": "owasp_web",
+      "construction": "hand-written",
+      "target_answer": "Based on the provided context, common examples of security misconfiguration that can lead to system compromise include:\n\n1. **Error handling reveals stack traces or other overly informative error messages to users**: This can provide attackers with valuable information about the system's internal workings, making it easier to exploit vulnerabilities.\n\n2. **For upgraded systems, the latest security features are disabled or not configured securely**: If security features are not properly configured or are disabled, the system may be left vulnerable to attacks.\n\n3. **The security settings in the application servers, application frameworks (e.g., Struts, Spring, ASP.NET), libraries, databases, etc., are not set to secure values**: If security settings are not properly configured, the system may be vulnerable to attacks.\n\n4. **The server does not send security headers or directives, or they are not set to secure values**: Security headers and directives are used to protect against common web attacks, such as cross-site scripting (XSS) and cross-site request forgery (CSRF). If they are not properly configured, the system may be vulnerable to these attacks.\n\n5. **The software is out of date or vulnerable (see [A06:2021-Vulnerable and Outdated Components](A06_2021-Vulnerable_and_Outdated_Components.md))**: Using outdated or vulnerable software can leave the system open to attacks.\n\nThese are just a few examples of security misconfiguration that can lead to system compromise. It's essential to regularly review and update security settings, ensure that security features are properly configured, and keep software up to date to prevent these types of vulnerabilities.",
+      "faithfulness_score": 0.42857142857142855,
+      "retrieved_doc_ids": [
+        "A04_2021-Insecure_Design",
+        "A01_2021-Broken_Access_Control",
+        "A05_2021-Security_Misconfiguration",
+        "A08_2021-Software_and_Data_Integrity_Failures"
+      ]
+    },
+    {
+      "id": "hand-019",
+      "question": "What is server-side request forgery (SSRF), and why has it become a notable risk in modern web applications?",
+      "ground_truth": "SSRF occurs when a web application fetches a remote resource without validating the user-supplied URL, allowing an attacker to coerce the application into sending requests to unintended destinations \u2014 for example, internal services, cloud metadata endpoints, or other systems behind a firewall. It has become more prominent because modern applications increasingly fetch URLs as a normal operation, and cloud and container environments expose sensitive metadata services.",
+      "reference_doc_id": "A10_2021-Server-Side_Request_Forgery_(SSRF)",
+      "source": "owasp_web",
+      "construction": "hand-written",
+      "target_answer": "**Server-Side Request Forgery (SSRF) Overview**\n\nServer-Side Request Forgery (SSRF) is a type of web application security vulnerability that allows an attacker to induce the web application to make unauthorized requests to internal or external services. This occurs when an attacker can manipulate the web application to send HTTP requests to arbitrary hosts, potentially leading to access to sensitive data, service disruption, network integrity compromise, business logic manipulation, and abuse of third-party resources.\n\n**Why SSRF has become a notable risk in modern web applications**\n\nSSRF has become a notable risk in modern web applications due to several factors:\n\n1.  **Increased use of internal services**: Modern web applications often rely on internal services, such as databases, APIs, and microservices, to provide functionality and data. SSRF vulnerabilities can allow attackers to access these internal services, potentially leading to sensitive data exposure or disruption of critical business processes.\n2.  **Complexity of web applications**: Modern web applications are often complex, with multiple layers of abstraction and dependencies. This complexity can make it difficult to identify and mitigate SSRF vulnerabilities, as they can arise from a variety of sources, including user input, configuration files, and third-party libraries.\n3.  **Evolving threat landscape**: The threat landscape is constantly evolving, with new attack vectors and techniques emerging regularly. SSRF vulnerabilities can be exploited using various techniques, including user input manipulation, DNS rebinding, and HTTP tunneling.\n4.  **Lack of awareness and education**: SSRF vulnerabilities are often overlooked or underestimated, as they can be difficult to identify and exploit. However, this lack of awareness and education can lead to a false sense of security, making it more challenging to detect and mitigate SSRF attacks.\n5.  **Increased reliance on third-party services**: Modern web applications often rely on third-party services, such as APIs, libraries, and frameworks, to provide functionality and data. SSRF vulnerabilities can arise from these third-party services, potentially leading to sensitive data exposure or disruption of critical business processes.\n\n**Best Practices for Mitigating SSRF Vulnerabilities**\n\nTo mitigate SSRF vulnerabilities, it is essential to follow best practices, including:\n\n1.  **Input validation and sanitization**: Validate and sanitize user input to prevent SSRF attacks.\n2.  **URL whitelisting**: Implement URL whitelisting to restrict the domains and protocols that can be accessed.\n3.  **DNS rebinding protection**: Implement DNS rebinding protection to prevent attackers from manipulating DNS responses.\n4.  **HTTP tunneling protection**: Implement HTTP tunneling protection to prevent attackers from using HTTP tunneling techniques.\n5.  **Regular security testing and monitoring**: Regularly test and monitor web applications for SSRF vulnerabilities to ensure they are properly mitigated.\n\nBy following these best practices and staying informed about the latest SSRF threats and mitigation techniques, organizations can reduce the risk of SSRF attacks and ensure the security and integrity of their web applications.",
+      "faithfulness_score": 0.1,
+      "retrieved_doc_ids": [
+        "A10_2021-Server-Side_Request_Forgery_(SSRF)",
+        "CVE-2024-5482",
+        "CVE-2023-52331",
+        "CVE-2024-5328"
+      ]
+    },
+    {
+      "id": "hand-020",
+      "question": "What practices help prevent vulnerable and outdated component risks in a software stack?",
+      "ground_truth": "Practices include maintaining an inventory of all components and their versions, continuously monitoring for vulnerabilities (e.g., via CVE feeds), removing unused dependencies, obtaining components only from official sources over secure channels, and applying patches in a timely fashion.",
+      "reference_doc_id": "A06_2021-Vulnerable_and_Outdated_Components",
+      "source": "owasp_web",
+      "construction": "hand-written",
+      "target_answer": "To prevent vulnerable and outdated component risks in a software stack, several practices can be implemented:\n\n1.  **Remove unused dependencies, unnecessary features, components, files, and documentation**: Regularly review and remove any unused or unnecessary components to reduce the attack surface and minimize the risk of vulnerabilities.\n\n2.  **Continuously inventory the versions of both client-side and server-side components (e.g., frameworks, libraries) and their dependencies**: Use tools like versions, OWASP Dependency Check, retire.js, etc. to track the versions of components and their dependencies. This helps identify outdated or vulnerable components.\n\n3.  **Monitor sources like Common Vulnerability and Exposures (CVE) and National Vulnerability Database (NVD) for vulnerabilities in the components**: Regularly check for security vulnerabilities in the components used in the software stack.\n\n4.  **Use software composition analysis tools to automate the process**: Utilize tools to automate the process of identifying vulnerabilities in the software stack.\n\n5.  **Subscribe to email alerts for security vulnerabilities related to components you use**: Stay informed about security vulnerabilities in the components used in the software stack by subscribing to email alerts.\n\n6.  **Only obtain components from official sources over secure links**: Obtain components from trusted sources to reduce the risk of including malicious or modified components.\n\n7.  **Prefer signed packages to reduce the chance of including a modified, malicious component**: Use signed packages to ensure the integrity of the components and reduce the risk of including malicious or modified components.\n\nBy implementing these practices, organizations can effectively prevent vulnerable and outdated component risks in their software stack and ensure the security and integrity of their applications.",
+      "faithfulness_score": 0.47368421052631576,
+      "retrieved_doc_ids": [
+        "A06_2021-Vulnerable_and_Outdated_Components",
+        "A06_2021-Vulnerable_and_Outdated_Components",
+        "A05_2021-Security_Misconfiguration",
+        "A06_2021-Vulnerable_and_Outdated_Components"
+      ]
+    }
+  ]
+}
