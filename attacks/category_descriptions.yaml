@@ -44,9 +44,13 @@ LLM06:2025: >-
   deletions, writes, transactions, external sends, or privileged tool use.
 
 LLM07:2025: >-
-  System Prompt Leakage — an attacker attempts to extract system prompts,
-  hidden policies, guardrail instructions, chain configuration, or other
-  internal control text that should remain confidential.
+  System Prompt Leakage — system prompts or instructions used to steer model
+  behavior can contain sensitive information not intended to be discovered.
+  The system prompt itself should not be treated as a secret or security
+  control; the underlying risk is exposure of embedded sensitive data and
+  control logic such as credentials, connection strings, internal rules,
+  role and permission structures, filtering criteria, guardrails, architecture
+  details, or other information that can facilitate follow-on attacks.
 
 LLM08:2025: >-
   Vector and Embedding Weaknesses — an attacker exploits embedding, retrieval,
