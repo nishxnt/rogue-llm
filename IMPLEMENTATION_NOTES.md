@@ -249,3 +249,17 @@ The LLM04 Data and Model Poisoning expansion used 5 seeds and produced 9 accepte
 Taxonomy decision: drop `biased_output_elicitation` from LLM04 and do not re-attempt it. Reframe
 `embedding_poisoning_via_query` for LLM08 later, where embedding and retrieval-layer behavior is
 the natural category boundary.
+
+### LLM07 expansion findings
+
+Source correction: the LLM07 category-description update was reported with the wrong OWASP URL. The
+correct OWASP 2025 System Prompt Leakage source is
+https://genai.owasp.org/llmrisk/llm072025-system-prompt-leakage/.
+
+The LLM07 System Prompt Leakage expansion used 9 seeds and produced 19 accepted survivors in
+`attacks/v1/checkpoints/LLM07.jsonl`. Results were accepted as-is.
+
+`role_rule_enumeration` had 0/3 survival and `context_format_inference` had 1/3 survival because
+the validator currently defines LLM07 narrowly as extraction of embedded sensitive data rather than
+any inference about system-prompt content. Accepted as-is. These adjacent attack patterns may move
+to LLM01 or a future LLM07.1 in v1.1.
