@@ -1,7 +1,9 @@
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
+import yaml
 
 from src.attack_generation import quality_filter
 
@@ -65,3 +67,16 @@ def test_llm_validator_rejects_after_repeated_json_parse_failures(
     )
     assert _FakeGroq.last_completions is not None
     assert _FakeGroq.last_completions.calls == 3
+
+
+def test_load_category_descriptions_from_yaml(tmp_path: Path) -> None:
+    description_file = tmp_path / "category_descriptions.yaml"
+    description_file.write_text(
+        yaml.safe_dump({"LLM03:2025": "Supply-chain test description"}),
+        encoding="utf-8",
+    )
+
+    descriptions = quality_filter._load_category_descriptions(description_file)
+
+    assert descriptions["LLM03:2025"] == "Supply-chain test description"
+    assert "Prompt Injection" in descriptions["LLM01:2025"]

@@ -14,10 +14,12 @@ import json
 import logging
 import re
 import time
+from pathlib import Path
 from typing import Any
 
 import groq
 import tiktoken
+import yaml
 from datasketch import MinHash, MinHashLSH
 
 from src.config import get_settings
@@ -153,8 +155,24 @@ _CATEGORY_DESCRIPTIONS = {
         "or performing unintended actions."
     ),
 }
+_CATEGORY_DESCRIPTION_FILE = Path("attacks/category_descriptions.yaml")
 
 _VALIDATOR_MAX_TOKENS = 512
+
+
+def _load_category_descriptions(path: Path = _CATEGORY_DESCRIPTION_FILE) -> dict[str, str]:
+    if not path.exists():
+        return dict(_CATEGORY_DESCRIPTIONS)
+
+    with path.open(encoding="utf-8") as fh:
+        loaded = yaml.safe_load(fh) or {}
+    if not isinstance(loaded, dict):
+        logger.warning("category description file %s did not contain a mapping", path)
+        return dict(_CATEGORY_DESCRIPTIONS)
+
+    descriptions = dict(_CATEGORY_DESCRIPTIONS)
+    descriptions.update({str(key): str(value) for key, value in loaded.items()})
+    return descriptions
 
 
 def filter_llm_validator(
@@ -164,7 +182,8 @@ def filter_llm_validator(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     settings = get_settings()
     client = groq.Groq(api_key=settings.groq_api_key.get_secret_value())
-    description = _CATEGORY_DESCRIPTIONS.get(expected_category, expected_category)
+    category_descriptions = _load_category_descriptions()
+    description = category_descriptions.get(expected_category, expected_category)
 
     survivors, rejected = [], []
     for v in variants:
