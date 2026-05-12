@@ -35,9 +35,13 @@ LLM05:2025: >-
   or remote code execution in backend systems.
 
 LLM06:2025: >-
-  Excessive Agency — an attacker exploits overly broad tool permissions,
-  autonomous workflows, or insufficient human approval boundaries to make an LLM
-  take unintended actions beyond the user's authorized intent.
+  Excessive Agency — an LLM-based system is granted agency to call functions or
+  interface with other systems through tools, skills, plugins, or agentic
+  workflows. The vulnerability enables damaging actions to be performed in
+  response to unexpected, ambiguous, or manipulated LLM outputs. Root causes
+  include excessive functionality, excessive permissions, and excessive autonomy,
+  including missing human-in-the-loop approval for high-impact actions such as
+  deletions, writes, transactions, external sends, or privileged tool use.
 
 LLM07:2025: >-
   System Prompt Leakage — an attacker attempts to extract system prompts,
