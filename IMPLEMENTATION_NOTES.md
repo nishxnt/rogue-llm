@@ -214,3 +214,14 @@ Audit of `attacks/v1/checkpoints/LLM01.jsonl` found one existing fail-open accep
 `LLM01-0031` (`LLM01-seed-013`, `payload_splitting`). Manual review decision: keep it. The decoded
 payload is a clear system-prompt-disclosure instruction, and the failure was validator
 infrastructure, not attack quality.
+
+### LLM02 expansion findings
+
+The LLM02 Sensitive Information Disclosure expansion used 9 seeds and produced 24 accepted
+survivors in `attacks/v1/checkpoints/LLM02.jsonl`. Results were accepted as-is.
+
+Seed `LLM02-seed-006` (repetition attack for training-data leakage) had 0/3 survival for a
+structural validator reason: the current validator scores prompts, not model responses, while
+repetition attacks are only visible as a vulnerability when the response degenerates or regurgitates
+memorized content. Do not iterate on this seed during Phase 2. Revisit this in Phase 4 as a known
+validator limitation when response-aware evaluation is available.
