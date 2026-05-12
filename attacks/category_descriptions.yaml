@@ -14,9 +14,16 @@ LLM03:2025: >-
   unverified components in the LLM application supply chain.
 
 LLM04:2025: >-
-  Data and Model Poisoning — an attacker tries to corrupt training, fine-tuning,
-  embedding, retrieval, or feedback data so model behavior or downstream outputs
-  become unsafe, biased, misleading, or attacker-controlled.
+  Data and Model Poisoning — data poisoning occurs when pre-training,
+  fine-tuning, or embedding data is manipulated to introduce vulnerabilities,
+  backdoors, or biases that compromise model security, performance, or ethical
+  behavior, leading to harmful outputs, impaired capabilities, biased or toxic
+  content, or exploitation of downstream systems. In black-box evaluation this
+  category includes probes for backdoor triggers and sleeper-agent activation
+  tokens; probes for memorized poisoned content from documented campaigns such
+  as PoisonGPT, Tay, and Sleeper Agents; eliciting outputs that reveal vendor
+  bias or commercial-data-poisoning signatures; manipulating RAG retrieval via
+  poisoned retrieved content; and soliciting operational poisoning techniques.
 
 LLM05:2025: >-
   Improper Output Handling — an attacker elicits outputs that become unsafe when
