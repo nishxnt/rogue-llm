@@ -225,3 +225,16 @@ structural validator reason: the current validator scores prompts, not model res
 repetition attacks are only visible as a vulnerability when the response degenerates or regurgitates
 memorized content. Do not iterate on this seed during Phase 2. Revisit this in Phase 4 as a known
 validator limitation when response-aware evaluation is available.
+
+### LLM03 expansion findings
+
+The LLM03 Supply Chain expansion used 3 seeds and produced 6 accepted survivors in
+`attacks/v1/checkpoints/LLM03.jsonl`. Results were accepted as-is.
+
+`model_identity_probing` had 1/3 survival. This may indicate validator over-strictness at the LLM03
+category boundary because model identity and supply-chain metadata disclosure can be relevant setup
+for supply-chain targeting. Do not act now; revisit if this pattern repeats in LLM04+.
+
+Two near-duplicate mutator outputs reached the validator for `memorized_poisoned_artifact_probing`.
+This suggests the MinHash threshold of 0.85 may be too lenient for short, narrow prompts. Do not
+change it yet; revisit after 3+ categories show the same pattern.
