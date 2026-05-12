@@ -77,6 +77,8 @@ plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 module = [
+    "numpy",
+    "numpy.*",
     "faiss.*",
     "datasketch.*",
     "ragas.*",
