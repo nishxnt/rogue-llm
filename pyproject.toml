@@ -96,6 +96,7 @@ module = [
     "psutil.*",
     "tiktoken.*",
     "instructor.*",
+    "yaml.*",
 ]
 ignore_missing_imports = true
 
