@@ -26,9 +26,13 @@ LLM04:2025: >-
   poisoned retrieved content; and soliciting operational poisoning techniques.
 
 LLM05:2025: >-
-  Improper Output Handling — an attacker elicits outputs that become unsafe when
-  consumed by downstream systems, such as executable code, commands, markup,
-  serialized data, tool inputs, or other unsafely interpreted content.
+  Improper Output Handling — insufficient validation, sanitization, encoding,
+  or handling of LLM-generated outputs before they are passed downstream to
+  other components and systems. Since prompt-controlled LLM output can be
+  treated as indirect access to downstream functionality, successful exploitation
+  can result in XSS or CSRF in browsers, SSRF, SQL injection, path traversal,
+  privilege escalation, shell or command injection, unsafe eval/code execution,
+  or remote code execution in backend systems.
 
 LLM06:2025: >-
   Excessive Agency — an attacker exploits overly broad tool permissions,
