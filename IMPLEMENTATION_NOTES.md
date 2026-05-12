@@ -238,3 +238,14 @@ for supply-chain targeting. Do not act now; revisit if this pattern repeats in L
 Two near-duplicate mutator outputs reached the validator for `memorized_poisoned_artifact_probing`.
 This suggests the MinHash threshold of 0.85 may be too lenient for short, narrow prompts. Do not
 change it yet; revisit after 3+ categories show the same pattern.
+
+### LLM04 expansion findings
+
+The LLM04 Data and Model Poisoning expansion used 5 seeds and produced 9 accepted survivors in
+`attacks/v1/checkpoints/LLM04.jsonl` across 3 retained strategies:
+`backdoor_trigger_probing`, `memorized_poisoned_content`, and
+`poisoning_technique_solicitation`.
+
+Taxonomy decision: drop `biased_output_elicitation` from LLM04 and do not re-attempt it. Reframe
+`embedding_poisoning_via_query` for LLM08 later, where embedding and retrieval-layer behavior is
+the natural category boundary.
