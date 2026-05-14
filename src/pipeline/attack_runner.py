@@ -14,6 +14,7 @@ import structlog
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.pipeline.cache import ResultCache, build_target_version, hash_text
+from src.pipeline.llm08_executor import LLM08Executor
 from src.pipeline.rate_limiter import TokenBucketRateLimiter
 from src.pipeline.retry import RetryExhaustedError, retry_transient
 from src.target_system.prompts import SYSTEM_PROMPT
@@ -84,6 +85,7 @@ class AttackRunner:
         self.results_root = Path(results_root)
         self.rate_limiter = rate_limiter or TokenBucketRateLimiter(rate_per_minute=30, burst=2)
         self.retry_sleeper = retry_sleeper
+        self.llm08_executor = LLM08Executor(target_system)
         self.target_model = _target_model(target_system)
         self.target_version = _target_version(target_system, self.target_model)
 
@@ -122,7 +124,7 @@ class AttackRunner:
     async def _run_one(self, attack: dict[str, Any]) -> AttackResult:
         attack_id = str(attack["id"])
         prompt = str(attack["prompt_text"])
-        prompt_hash = hash_text(prompt)
+        prompt_hash = _attack_prompt_hash(attack)
         cached = self.cache.get(
             attack_id=attack_id,
             target_model=self.target_model,
@@ -134,10 +136,22 @@ class AttackRunner:
 
         await self.rate_limiter.acquire()
         try:
-            response = await retry_transient(
-                lambda: self.target_system.aquery(prompt),
-                sleeper=self.retry_sleeper,
-            )
+            if attack["owasp_category"] == "LLM08:2025":
+                llm08_result = await retry_transient(
+                    lambda: self.llm08_executor.execute(attack),
+                    sleeper=self.retry_sleeper,
+                )
+                response = llm08_result.response
+                extra_fields: dict[str, Any] = {
+                    "llm08_retrieved_docs": llm08_result.llm08_retrieved_docs,
+                    "llm08_checks": llm08_result.llm08_checks,
+                }
+            else:
+                response = await retry_transient(
+                    lambda: self.target_system.aquery(prompt),
+                    sleeper=self.retry_sleeper,
+                )
+                extra_fields = {}
             result = AttackResult(
                 attack_id=attack_id,
                 owasp_category=str(attack["owasp_category"]),
@@ -150,6 +164,7 @@ class AttackRunner:
                 timestamp=_utc_now(),
                 status="success",
                 retrieved_doc_ids=[chunk.doc_id for chunk in response.retrieved_chunks],
+                **extra_fields,
             )
         except RetryExhaustedError as exc:
             result = AttackResult(
@@ -222,6 +237,12 @@ def _stratified_sample(attacks: Sequence[dict[str, Any]], n: int) -> list[dict[s
                 next_categories.append(category)
         categories = next_categories
     return selected
+
+
+def _attack_prompt_hash(attack: dict[str, Any]) -> str:
+    if attack.get("owasp_category") == "LLM08:2025":
+        return hash_text(json.dumps(attack, sort_keys=True, default=str))
+    return hash_text(str(attack["prompt_text"]))
 
 
 def _target_model(target_system: AsyncTargetSystem) -> str:
