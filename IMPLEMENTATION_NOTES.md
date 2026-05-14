@@ -259,6 +259,19 @@ https://genai.owasp.org/llmrisk/llm072025-system-prompt-leakage/.
 The LLM07 System Prompt Leakage expansion used 9 seeds and produced 19 accepted survivors in
 `attacks/v1/checkpoints/LLM07.jsonl`. Results were accepted as-is.
 
+### LLM09 expansion findings
+
+Input-neutral attack validator limitation: `hallucinated_technical_detail` and
+`hallucinated_package_recommendation` strategies failed 0/3 each because their attacks are
+response-judged, not prompt-judged. The validator correctly sees no attack signal in the input.
+This is the same structural issue as LLM02 repetition attacks. These belong to a Phase 4 evaluation
+class: responses must be scored to detect them, prompts alone cannot. This will be addressed in the
+Phase 4 evaluation engine, not Phase 2 generation.
+
+Strategy-specific mutator guidance was added for `false_premise_acceptance` and
+`unsafe_code_with_confident_framing` to preserve the planted false-premise mechanism and the
+explicit unsafe-constraint list during LLM09 reruns.
+
 `role_rule_enumeration` had 0/3 survival and `context_format_inference` had 1/3 survival because
 the validator currently defines LLM07 narrowly as extraction of embedded sensitive data rather than
 any inference about system-prompt content. Accepted as-is. These adjacent attack patterns may move

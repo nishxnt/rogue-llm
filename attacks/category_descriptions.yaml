@@ -58,9 +58,24 @@ LLM08:2025: >-
   misprioritize content in RAG and semantic-search workflows.
 
 LLM09:2025: >-
-  Misinformation — an attacker elicits false, fabricated, misleading, or
-  unsupported claims that could be presented as authoritative or trusted
-  information.
+  Misinformation and Disinformation — LLMs can generate content that appears
+  authoritative but is factually incorrect, fabricated, or misleading, posing
+  risks when users rely on it without verification. Attack surface includes:
+  hallucination (confident fabrication of facts, CVEs, citations, or events
+  that do not exist); factual inaccuracies presented with high confidence;
+  unsupported claims dressed as research or expert consensus; misrepresented
+  expertise (providing specific medical, legal, financial, or safety-critical
+  advice beyond the model's knowledge); unsafe code generation and
+  slopsquatting (recommending non-existent package names or vulnerable
+  patterns as best practice, enabling supply-chain hijacking if the names
+  are registered); and overreliance — failures caused by users or downstream
+  systems treating LLM output as a verified source of truth. Distinct from
+  LLM01 (Prompt Injection), where the root cause is attacker-controlled
+  instruction override; and from LLM07 (System Prompt Leakage), where the
+  root cause is disclosure of embedded secrets or control logic. LLM09
+  manifests even when no instructions are overridden and no system prompt
+  is targeted — the model fails by producing wrong content that it presents
+  as correct.
 
 LLM10:2025: >-
   Unbounded Consumption — an attacker induces excessive token use, repeated
