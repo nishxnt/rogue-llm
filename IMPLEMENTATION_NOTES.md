@@ -272,6 +272,19 @@ Strategy-specific mutator guidance was added for `false_premise_acceptance` and
 `unsafe_code_with_confident_framing` to preserve the planted false-premise mechanism and the
 explicit unsafe-constraint list during LLM09 reruns.
 
+### LLM10 expansion findings
+
+The LLM10 Unbounded Consumption expansion used 7 seeds and produced 17 accepted survivors in
+`attacks/v1/checkpoints/LLM10.jsonl` from 21 generated variants. Stage 1 length, Stage 2 metadata,
+and Stage 3 MinHash dedup retained all 21 variants; the LLM validator accepted 17 and rejected 4.
+
+Known prompt-judged validator limitation: `model_extraction_probing` failed 0/3 because model
+extraction via API is primarily a repeated-query behavioral pattern, not always visible from a
+single prompt in isolation. One `variable_length_input_flood` variant was also rejected as benign
+large-document analysis. `denial_of_wallet`, `output_amplification`, and
+`api_side_channel_timing` all survived 3/3 in this run, despite being expected Phase 4
+response/behavior-scoring watchlist strategies.
+
 `role_rule_enumeration` had 0/3 survival and `context_format_inference` had 1/3 survival because
 the validator currently defines LLM07 narrowly as extraction of embedded sensitive data rather than
 any inference about system-prompt content. Accepted as-is. These adjacent attack patterns may move

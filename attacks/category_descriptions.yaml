@@ -78,6 +78,11 @@ LLM09:2025: >-
   as correct.
 
 LLM10:2025: >-
-  Unbounded Consumption — an attacker induces excessive token use, repeated
-  work, resource exhaustion, costly tool calls, or denial-of-wallet behavior in
-  the LLM application.
+  Unbounded Consumption — an LLM application allows excessive and uncontrolled
+  inferences or resource use, leading to denial of service (availability
+  degradation), denial of wallet (cost amplification), economic losses, model
+  theft, or service degradation. Attack surface includes variable-length input
+  floods, continuous input overflow, resource-intensive queries, output
+  amplification, repeated or recursive requests, model extraction via API, and
+  API side-channel attacks that infer model or system behavior from timing,
+  length, error, or other response differences.
