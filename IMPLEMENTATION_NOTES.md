@@ -316,3 +316,98 @@ Open questions for Phase 3:
   shared cache/persistence utility without changing saved artifact formats.
 - Ensure `AttackRunner` consumes LLM08 structured entries correctly, including `target_query`,
   `poisoned_doc_content`, similarity thresholds, and retrieval metadata.
+
+---
+
+## Phase 3 — Automated Attack Execution
+
+**Branch:** `feat/phase-3-attack-runner`
+**Status:** In progress
+
+### 3.1 Runner architecture
+
+Phase 3 introduces the canonical `src/pipeline/` execution layer:
+
+- `attack_runner.py`: async `AttackRunner`, result schema, dataset selection, Typer CLI.
+- `cache.py`: SQLite result cache promoted from Phase 1's per-entry checkpoint pattern.
+- `rate_limiter.py`: async token-bucket limiter plus semaphore-based concurrency.
+- `retry.py`: capped transient-error retry policy.
+- `llm08_executor.py`: LLM08 retrieval-layer execution path.
+
+The runner is async throughout. `AttackRunner` uses `asyncio.Semaphore` with default concurrency 5,
+but target-model calls still pass through a token bucket before execution.
+
+### 3.2 Cache and invalidation
+
+Cache location is `cache/results_cache.sqlite` (gitignored). Writes happen per result immediately
+after each attack finishes, preserving the Phase 1 lost-work lesson. Cache key:
+
+`(attack_id, target_model, target_version, prompt_hash)`
+
+`target_version` hashes target model, system prompt, prompt template, and retrieval config. The
+retrieval config includes `top_k`, embedding model, and search type so RAG behavior changes
+invalidate old target responses. The cache includes a `cache_schema_version` table; unknown schema
+versions fail closed instead of silently reading incompatible data.
+
+Infrastructure failures are recorded as structured result entries with
+`status="infrastructure_failure"` rather than being omitted from `results.jsonl`. This keeps run
+completeness auditable and allows cheap retries because successful prior rows remain cached.
+
+### 3.3 Rate limiting and retry
+
+Groq's target-model quota for `llama-3.1-8b-instant` is treated as 30 RPM. The rate limiter uses:
+
+- `rate_per_minute=30`
+- `burst=2`
+- default runner concurrency 5
+
+The burst is intentionally 2, not 5, because a concurrency-sized burst can fire several calls inside
+one rolling-window second and invite avoidable 429s.
+
+Retries are capped at three attempts after the initial call: 1s, 2s, then 4s. `Retry-After` is
+honored when present. After retry exhaustion, the result is recorded as `infrastructure_failure`.
+The short cap avoids long wall-clock stalls during sustained 429 storms; per-result caching makes
+reruns cheap.
+
+### 3.4 LLM08 execution
+
+LLM08 entries are structured retrieval attacks, so they do not all use the normal `aquery()` path.
+`llm08_executor.py` owns the special behavior:
+
+- `embedding_poisoning`: deep-copy the loaded FAISS vectorstore with `copy.deepcopy()`, add the
+  poisoned document to the in-memory copy, query that copy, and tear it down. The on-disk index is
+  never saved or mutated.
+- `similarity_collision`: query the normal target and record whether `target_doc_id` was retrieved.
+- `retrieval_boundary_probing` and `embedding_inversion`: standard target query with additional
+  retrieved-document diagnostics.
+
+LLM08 result extras:
+
+- `llm08_retrieved_docs`: retrieved docs with `doc_id`, `source`, FAISS L2 `distance`, approximate
+  `similarity = 1 / (1 + distance)`, and content.
+- `llm08_checks`: strategy-specific booleans such as `poisoned_doc_retrieved` and
+  `target_doc_retrieved`.
+
+Important metric note: LangChain FAISS `similarity_search_with_score()` returns L2 distance, where
+lower means more similar. The result field is named `distance` to avoid Phase 4 confusing it with a
+cosine-style score.
+
+### 3.5 CLI and sampling
+
+The Typer CLI lives in `src.pipeline.attack_runner`:
+
+```bash
+uv run python -m src.pipeline.attack_runner run --dry-run
+uv run python -m src.pipeline.attack_runner run --sample 5
+uv run python -m src.pipeline.attack_runner run --category LLM01
+```
+
+Dry-run mode loads and filters the dataset but does not instantiate `RAGChatbot`, open the cache, or
+make API calls. Sampling is deterministic and stratified across categories for repeatable dev runs.
+
+### 3.6 LangSmith tracing
+
+LangSmith remains controlled by environment configuration and defaults off in CI to preserve the
+5k/month free quota. Phase 3 result records already include attack IDs, OWASP categories, retrieved
+chunks, document IDs, and response text so Phase 4 can add richer trace tags without changing the
+result artifact shape.
