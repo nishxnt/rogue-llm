@@ -144,12 +144,101 @@ class ResultCache:
                 ),
             )
 
+    def get_metric_score(
+        self,
+        *,
+        attack_id: str,
+        metric_name: str,
+        judge_model: str,
+        judge_version: str,
+        input_hash: str,
+    ) -> dict[str, Any] | None:
+        """Return a cached metric score, or ``None`` on cache miss."""
+        row = self._conn.execute(
+            """
+            SELECT score_json
+            FROM metric_scores
+            WHERE attack_id = ?
+              AND metric_name = ?
+              AND judge_model = ?
+              AND judge_version = ?
+              AND input_hash = ?
+            """,
+            (attack_id, metric_name, judge_model, judge_version, input_hash),
+        ).fetchone()
+        if row is None:
+            return None
+        return cast("dict[str, Any]", json.loads(str(row["score_json"])))
+
+    def set_metric_score(
+        self,
+        *,
+        attack_id: str,
+        metric_name: str,
+        judge_model: str,
+        judge_version: str,
+        input_hash: str,
+        score: Mapping[str, Any],
+    ) -> None:
+        """Persist one metric score immediately."""
+        now = _utc_now()
+        score_json = json.dumps(score, sort_keys=True, default=str)
+        with self._conn:
+            self._conn.execute(
+                """
+                INSERT INTO metric_scores (
+                    attack_id,
+                    metric_name,
+                    judge_model,
+                    judge_version,
+                    input_hash,
+                    score_json,
+                    created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(attack_id, metric_name, judge_model, judge_version, input_hash)
+                DO UPDATE SET
+                    score_json = excluded.score_json,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    attack_id,
+                    metric_name,
+                    judge_model,
+                    judge_version,
+                    input_hash,
+                    score_json,
+                    now,
+                    now,
+                ),
+            )
+
     def _ensure_schema(self) -> None:
         with self._conn:
             self._conn.execute("""
                 CREATE TABLE IF NOT EXISTS cache_schema_version (
                     version INTEGER NOT NULL,
                     applied_at TEXT NOT NULL
+                )
+                """)
+            self._conn.execute("""
+                CREATE TABLE IF NOT EXISTS metric_scores (
+                    attack_id TEXT NOT NULL,
+                    metric_name TEXT NOT NULL,
+                    judge_model TEXT NOT NULL,
+                    judge_version TEXT NOT NULL,
+                    input_hash TEXT NOT NULL,
+                    score_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY (
+                        attack_id,
+                        metric_name,
+                        judge_model,
+                        judge_version,
+                        input_hash
+                    )
                 )
                 """)
             row = self._conn.execute(
