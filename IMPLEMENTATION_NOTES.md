@@ -289,3 +289,30 @@ response/behavior-scoring watchlist strategies.
 the validator currently defines LLM07 narrowly as extraction of embedded sensitive data rather than
 any inference about system-prompt content. Accepted as-is. These adjacent attack patterns may move
 to LLM01 or a future LLM07.1 in v1.1.
+
+### Phase 2 closeout
+
+Phase 2 generation is complete at 175 accepted attacks across all 10 OWASP LLM Top 10 2025
+categories. This is the right number for v0.2.0 even though the original planning target was 200:
+the final dataset keeps only category-coherent, quality-filtered variants and avoids padding weak
+strategies that the validator correctly rejected or that require response/behavior-aware evaluation.
+The canonical assembled dataset is `attacks/v1/dataset.jsonl`; category checkpoints remain in
+`attacks/v1/checkpoints/` for provenance and debugging.
+
+Engineering patterns introduced during Phase 2:
+
+- Protocol-based dependencies for generator components, especially LLM08, so tests can exercise
+  generation behavior without live model calls or mutable vector-store state.
+- Fail-closed validation: validator infrastructure failures now reject variants with explicit
+  rejection categories instead of accepting by default.
+- Strategy-specific mutator guidance via `_STRATEGY_GUIDANCE`, preserving mechanisms such as
+  roleplay framing, false-premise misinformation, and unsafe-code constraint lists.
+- Checkpoint-per-variant persistence, so interrupted generation runs retain accepted survivors and
+  can be audited category by category.
+
+Open questions for Phase 3:
+
+- Promote the checkpointing pattern from `src/evaluation/baseline.py` and Phase 2 generation into a
+  shared cache/persistence utility without changing saved artifact formats.
+- Ensure `AttackRunner` consumes LLM08 structured entries correctly, including `target_query`,
+  `poisoned_doc_content`, similarity thresholds, and retrieval metadata.
