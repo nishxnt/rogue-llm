@@ -5,12 +5,14 @@ from __future__ import annotations
 import asyncio
 import json
 import random
+import re
 from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Annotated, Any, Protocol
 
 import structlog
+import typer
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.pipeline.cache import ResultCache, build_target_version, hash_text
@@ -27,9 +29,21 @@ if TYPE_CHECKING:
 log = structlog.get_logger()
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_DEFAULT_DATASET_PATH = _PROJECT_ROOT / "attacks" / "v1" / "dataset.jsonl"
+_DEFAULT_CACHE_PATH = _PROJECT_ROOT / "cache" / "results_cache.sqlite"
 _DEFAULT_RESULTS_ROOT = _PROJECT_ROOT / "results"
 _DEFAULT_TARGET_MODEL = "llama-3.1-8b-instant"
 _DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+_CATEGORY_RE = re.compile(r"^LLM\d{2}(?::2025)?$")
+
+app = typer.Typer(add_completion=False)
+
+DatasetPathOption = Annotated[Path, typer.Option("--dataset")]
+CachePathOption = Annotated[Path, typer.Option("--cache")]
+ConcurrencyOption = Annotated[int, typer.Option("--concurrency")]
+SampleOption = Annotated[int | None, typer.Option("--sample", min=1)]
+CategoryOption = Annotated[str | None, typer.Option("--category")]
+DryRunOption = Annotated[bool, typer.Option("--dry-run")]
 
 
 class AsyncTargetSystem(Protocol):
@@ -68,6 +82,7 @@ class AttackRunner:
         cache_path: Path | str,
         concurrency: int = 5,
         dry_run_sample_n: int | None = None,
+        category: str | None = None,
         results_root: Path | str = _DEFAULT_RESULTS_ROOT,
         rate_limiter: TokenBucketRateLimiter | None = None,
         retry_sleeper: Callable[[float], Awaitable[None]] = asyncio.sleep,
@@ -82,6 +97,7 @@ class AttackRunner:
         self.cache = ResultCache(cache_path)
         self.concurrency = concurrency
         self.dry_run_sample_n = dry_run_sample_n
+        self.category = _normalize_category(category) if category else None
         self.results_root = Path(results_root)
         self.rate_limiter = rate_limiter or TokenBucketRateLimiter(rate_per_minute=30, burst=2)
         self.retry_sleeper = retry_sleeper
@@ -91,9 +107,11 @@ class AttackRunner:
 
     async def run(self) -> list[AttackResult]:
         """Run attacks, persist JSONL results, and return structured records."""
-        attacks = self._load_dataset()
-        if self.dry_run_sample_n is not None:
-            attacks = _stratified_sample(attacks, self.dry_run_sample_n)
+        attacks = select_attacks(
+            self._load_dataset(),
+            sample_n=self.dry_run_sample_n,
+            category=self.category,
+        )
 
         results = await self._run_attacks(attacks)
         self._write_results(results)
@@ -239,10 +257,45 @@ def _stratified_sample(attacks: Sequence[dict[str, Any]], n: int) -> list[dict[s
     return selected
 
 
+def load_dataset(path: Path | str) -> list[dict[str, Any]]:
+    dataset_path = Path(path)
+    if not dataset_path.exists():
+        raise FileNotFoundError(f"dataset not found: {dataset_path}")
+    return [
+        json.loads(line)
+        for line in dataset_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def select_attacks(
+    attacks: Sequence[dict[str, Any]],
+    *,
+    sample_n: int | None = None,
+    category: str | None = None,
+) -> list[dict[str, Any]]:
+    selected = list(attacks)
+    if category:
+        normalized = _normalize_category(category)
+        selected = [attack for attack in selected if attack["owasp_category"] == normalized]
+    if sample_n is not None:
+        selected = _stratified_sample(selected, sample_n)
+    return selected
+
+
 def _attack_prompt_hash(attack: dict[str, Any]) -> str:
     if attack.get("owasp_category") == "LLM08:2025":
         return hash_text(json.dumps(attack, sort_keys=True, default=str))
     return hash_text(str(attack["prompt_text"]))
+
+
+def _normalize_category(category: str) -> str:
+    value = category.upper()
+    if not _CATEGORY_RE.match(value):
+        raise ValueError("category must look like LLM01 or LLM01:2025")
+    if ":" not in value:
+        value = f"{value}:2025"
+    return value
 
 
 def _target_model(target_system: AsyncTargetSystem) -> str:
@@ -269,3 +322,50 @@ def _target_version(target_system: AsyncTargetSystem, target_model: str) -> str:
 
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+@app.command()
+def run(
+    dataset_path: DatasetPathOption = _DEFAULT_DATASET_PATH,
+    cache_path: CachePathOption = _DEFAULT_CACHE_PATH,
+    concurrency: ConcurrencyOption = 5,
+    sample: SampleOption = None,
+    category: CategoryOption = None,
+    dry_run: DryRunOption = False,
+) -> None:
+    """Run Phase 3 attack execution."""
+    attacks = select_attacks(load_dataset(dataset_path), sample_n=sample, category=category)
+    if dry_run:
+        typer.echo(f"Dry run: {len(attacks)} attack(s) would execute")
+        for attack in attacks:
+            typer.echo(f"{attack['id']}\t{attack['owasp_category']}\t{attack['attack_strategy']}")
+        return
+
+    from src.target_system.rag_chatbot import RAGChatbot
+
+    runner = AttackRunner(
+        target_system=RAGChatbot(),
+        dataset_path=dataset_path,
+        cache_path=cache_path,
+        concurrency=concurrency,
+        dry_run_sample_n=sample,
+        category=category,
+    )
+    try:
+        results = asyncio.run(runner.run())
+    finally:
+        runner.close()
+
+    statuses: dict[str, int] = defaultdict(int)
+    for result in results:
+        statuses[result.status] += 1
+    typer.echo(f"Executed {len(results)} attack(s): {dict(sorted(statuses.items()))}")
+
+
+@app.command(hidden=True)
+def _commands() -> None:
+    """Keep Typer in multi-command mode so ``run`` is explicit."""
+
+
+if __name__ == "__main__":
+    app()
