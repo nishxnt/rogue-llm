@@ -1,0 +1,88 @@
+LLM01:2025: >-
+  Prompt Injection — an attacker crafts direct or indirect inputs that manipulate
+  the LLM into overriding its instructions, ignoring safety rules, leaking the
+  system prompt, or performing unintended actions.
+
+LLM02:2025: >-
+  Sensitive Information Disclosure — an attacker tries to make the LLM reveal
+  PII, credentials, secrets, proprietary data, confidential business data,
+  system internals, or memorized training data that should not be disclosed.
+
+LLM03:2025: >-
+  Supply Chain — an attacker targets risks from third-party models, datasets,
+  adapters, hubs, dependencies, model provenance, compromised artifacts, or
+  unverified components in the LLM application supply chain.
+
+LLM04:2025: >-
+  Data and Model Poisoning — data poisoning occurs when pre-training,
+  fine-tuning, or embedding data is manipulated to introduce vulnerabilities,
+  backdoors, or biases that compromise model security, performance, or ethical
+  behavior, leading to harmful outputs, impaired capabilities, biased or toxic
+  content, or exploitation of downstream systems. In black-box evaluation this
+  category includes probes for backdoor triggers and sleeper-agent activation
+  tokens; probes for memorized poisoned content from documented campaigns such
+  as PoisonGPT, Tay, and Sleeper Agents; eliciting outputs that reveal vendor
+  bias or commercial-data-poisoning signatures; manipulating RAG retrieval via
+  poisoned retrieved content; and soliciting operational poisoning techniques.
+
+LLM05:2025: >-
+  Improper Output Handling — insufficient validation, sanitization, encoding,
+  or handling of LLM-generated outputs before they are passed downstream to
+  other components and systems. Since prompt-controlled LLM output can be
+  treated as indirect access to downstream functionality, successful exploitation
+  can result in XSS or CSRF in browsers, SSRF, SQL injection, path traversal,
+  privilege escalation, shell or command injection, unsafe eval/code execution,
+  or remote code execution in backend systems.
+
+LLM06:2025: >-
+  Excessive Agency — an LLM-based system is granted agency to call functions or
+  interface with other systems through tools, skills, plugins, or agentic
+  workflows. The vulnerability enables damaging actions to be performed in
+  response to unexpected, ambiguous, or manipulated LLM outputs. Root causes
+  include excessive functionality, excessive permissions, and excessive autonomy,
+  including missing human-in-the-loop approval for high-impact actions such as
+  deletions, writes, transactions, external sends, or privileged tool use.
+
+LLM07:2025: >-
+  System Prompt Leakage — system prompts or instructions used to steer model
+  behavior can contain sensitive information not intended to be discovered.
+  The system prompt itself should not be treated as a secret or security
+  control; the underlying risk is exposure of embedded sensitive data and
+  control logic such as credentials, connection strings, internal rules,
+  role and permission structures, filtering criteria, guardrails, architecture
+  details, or other information that can facilitate follow-on attacks.
+
+LLM08:2025: >-
+  Vector and Embedding Weaknesses — an attacker exploits embedding, retrieval,
+  ranking, chunking, or vector-store behavior to inject, surface, hide, or
+  misprioritize content in RAG and semantic-search workflows.
+
+LLM09:2025: >-
+  Misinformation and Disinformation — LLMs can generate content that appears
+  authoritative but is factually incorrect, fabricated, or misleading, posing
+  risks when users rely on it without verification. Attack surface includes:
+  hallucination (confident fabrication of facts, CVEs, citations, or events
+  that do not exist); factual inaccuracies presented with high confidence;
+  unsupported claims dressed as research or expert consensus; misrepresented
+  expertise (providing specific medical, legal, financial, or safety-critical
+  advice beyond the model's knowledge); unsafe code generation and
+  slopsquatting (recommending non-existent package names or vulnerable
+  patterns as best practice, enabling supply-chain hijacking if the names
+  are registered); and overreliance — failures caused by users or downstream
+  systems treating LLM output as a verified source of truth. Distinct from
+  LLM01 (Prompt Injection), where the root cause is attacker-controlled
+  instruction override; and from LLM07 (System Prompt Leakage), where the
+  root cause is disclosure of embedded secrets or control logic. LLM09
+  manifests even when no instructions are overridden and no system prompt
+  is targeted — the model fails by producing wrong content that it presents
+  as correct.
+
+LLM10:2025: >-
+  Unbounded Consumption — an LLM application allows excessive and uncontrolled
+  inferences or resource use, leading to denial of service (availability
+  degradation), denial of wallet (cost amplification), economic losses, model
+  theft, or service degradation. Attack surface includes variable-length input
+  floods, continuous input overflow, resource-intensive queries, output
+  amplification, repeated or recursive requests, model extraction via API, and
+  API side-channel attacks that infer model or system behavior from timing,
+  length, error, or other response differences.

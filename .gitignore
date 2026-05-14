@@ -31,6 +31,7 @@ data/eval/*
 !data/eval/.gitkeep
 !data/eval/baseline_qa.jsonl
 !data/eval/review_log.md
+attacks/v1/rejected.jsonl
 
 # Jupyter
 .ipynb_checkpoints/

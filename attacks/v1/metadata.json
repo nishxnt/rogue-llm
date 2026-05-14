@@ -1,0 +1,281 @@
+{
+  "generation_date": "2026-05-14",
+  "total_attacks": 175,
+  "per_category_counts": {
+    "LLM01:2025": 38,
+    "LLM02:2025": 24,
+    "LLM03:2025": 6,
+    "LLM04:2025": 9,
+    "LLM05:2025": 20,
+    "LLM06:2025": 12,
+    "LLM07:2025": 19,
+    "LLM08:2025": 11,
+    "LLM09:2025": 19,
+    "LLM10:2025": 17
+  },
+  "per_strategy_counts": {
+    "adversarial_suffix": 3,
+    "agentic_self_authorization": 3,
+    "api_side_channel_timing": 3,
+    "backdoor_trigger_probing": 3,
+    "business_secret_extraction": 3,
+    "code_generation_with_insecure_pattern": 2,
+    "completion_continuation": 3,
+    "compromised_source_recommendation": 3,
+    "contested_topic_with_false_certainty": 2,
+    "context_format_inference": 1,
+    "continuous_input_overflow": 3,
+    "credential_extraction": 6,
+    "denial_of_wallet": 3,
+    "direct_override": 10,
+    "embedded_secret_extraction": 3,
+    "embedding_inversion": 2,
+    "embedding_poisoning": 4,
+    "excessive_permission_recommendation": 3,
+    "fabricated_citation": 4,
+    "fabricated_factual_aggregation": 1,
+    "false_premise_acceptance": 5,
+    "hashed_or_encoded_request": 3,
+    "human_approval_bypass": 3,
+    "imagined_tool_invocation": 3,
+    "indirect_pii_inference": 3,
+    "indirect_via_retrieval": 9,
+    "memorized_poisoned_artifact_probing": 2,
+    "memorized_poisoned_content": 3,
+    "meta_instruction_query": 3,
+    "misrepresented_expertise": 3,
+    "model_identity_probing": 1,
+    "multilingual_obfuscated": 6,
+    "output_amplification": 3,
+    "paraphrase_inference": 3,
+    "path_traversal_in_output": 3,
+    "payload_splitting": 9,
+    "pii_extraction": 6,
+    "poisoning_technique_solicitation": 3,
+    "resource_intensive_query": 3,
+    "retrieval_boundary_probing": 2,
+    "roleplay_jailbreak": 1,
+    "shell_command_injection": 3,
+    "similarity_collision": 3,
+    "sql_injection_payload": 3,
+    "ssrf_via_url_generation": 3,
+    "system_internal_disclosure": 3,
+    "training_data_regurgitation": 3,
+    "unsafe_code_with_confident_framing": 4,
+    "variable_length_input_flood": 2,
+    "verbatim_extraction": 3,
+    "xss_payload_in_response": 6
+  },
+  "mutator_model": "llama-3.3-70b-versatile",
+  "validator_model": "openai/gpt-oss-120b",
+  "filter_pass_rates": {
+    "LLM01:2025": {
+      "generated": 43,
+      "after_length": 43,
+      "after_metadata": 43,
+      "after_dedup": 43,
+      "after_validator": 38,
+      "accepted": 38,
+      "rejected": 5,
+      "validator_skipped": 0,
+      "overall": 0.8837,
+      "stage_rates": {
+        "length": 1.0,
+        "metadata_regex": 1.0,
+        "minhash_dedup": 1.0,
+        "llm_validator": 0.8837
+      }
+    },
+    "LLM02:2025": {
+      "generated": 27,
+      "after_length": 27,
+      "after_metadata": 27,
+      "after_dedup": 27,
+      "after_validator": 24,
+      "accepted": 24,
+      "rejected": 3,
+      "validator_skipped": 0,
+      "overall": 0.8889,
+      "stage_rates": {
+        "length": 1.0,
+        "metadata_regex": 1.0,
+        "minhash_dedup": 1.0,
+        "llm_validator": 0.8889
+      }
+    },
+    "LLM03:2025": {
+      "generated": 9,
+      "after_length": 9,
+      "after_metadata": 9,
+      "after_dedup": 9,
+      "after_validator": 6,
+      "accepted": 6,
+      "rejected": 3,
+      "validator_skipped": 0,
+      "overall": 0.6667,
+      "stage_rates": {
+        "length": 1.0,
+        "metadata_regex": 1.0,
+        "minhash_dedup": 1.0,
+        "llm_validator": 0.6667
+      }
+    },
+    "LLM04:2025": {
+      "generated": 27,
+      "after_length": 27,
+      "after_metadata": 27,
+      "after_dedup": 27,
+      "after_validator": 9,
+      "accepted": 9,
+      "rejected": 18,
+      "validator_skipped": 0,
+      "overall": 0.3333,
+      "stage_rates": {
+        "length": 1.0,
+        "metadata_regex": 1.0,
+        "minhash_dedup": 1.0,
+        "llm_validator": 0.3333
+      }
+    },
+    "LLM05:2025": {
+      "generated": 21,
+      "after_length": 21,
+      "after_metadata": 21,
+      "after_dedup": 21,
+      "after_validator": 20,
+      "accepted": 20,
+      "rejected": 1,
+      "validator_skipped": 0,
+      "overall": 0.9524,
+      "stage_rates": {
+        "length": 1.0,
+        "metadata_regex": 1.0,
+        "minhash_dedup": 1.0,
+        "llm_validator": 0.9524
+      }
+    },
+    "LLM06:2025": {
+      "generated": 12,
+      "after_length": 12,
+      "after_metadata": 12,
+      "after_dedup": 12,
+      "after_validator": 12,
+      "accepted": 12,
+      "rejected": 0,
+      "validator_skipped": 0,
+      "overall": 1.0,
+      "stage_rates": {
+        "length": 1.0,
+        "metadata_regex": 1.0,
+        "minhash_dedup": 1.0,
+        "llm_validator": 1.0
+      }
+    },
+    "LLM07:2025": {
+      "generated": 27,
+      "after_length": 27,
+      "after_metadata": 27,
+      "after_dedup": 27,
+      "after_validator": 19,
+      "accepted": 19,
+      "rejected": 8,
+      "validator_skipped": 0,
+      "overall": 0.7037,
+      "stage_rates": {
+        "length": 1.0,
+        "metadata_regex": 1.0,
+        "minhash_dedup": 1.0,
+        "llm_validator": 0.7037
+      }
+    },
+    "LLM08:2025": {
+      "generated": 11,
+      "after_length": 11,
+      "after_metadata": 11,
+      "after_dedup": 11,
+      "after_validator": 11,
+      "accepted": 11,
+      "rejected": 0,
+      "validator_skipped": 11,
+      "overall": 1.0,
+      "stage_rates": {
+        "length": 1.0,
+        "metadata_regex": 1.0,
+        "minhash_dedup": 1.0,
+        "llm_validator": "skipped"
+      }
+    },
+    "LLM09:2025": {
+      "generated": 36,
+      "after_length": 36,
+      "after_metadata": 36,
+      "after_dedup": 36,
+      "after_validator": 19,
+      "accepted": 19,
+      "rejected": 17,
+      "validator_skipped": 0,
+      "overall": 0.5278,
+      "stage_rates": {
+        "length": 1.0,
+        "metadata_regex": 1.0,
+        "minhash_dedup": 1.0,
+        "llm_validator": 0.5278
+      }
+    },
+    "LLM10:2025": {
+      "generated": 21,
+      "after_length": 21,
+      "after_metadata": 21,
+      "after_dedup": 21,
+      "after_validator": 17,
+      "accepted": 17,
+      "rejected": 4,
+      "validator_skipped": 0,
+      "overall": 0.8095,
+      "stage_rates": {
+        "length": 1.0,
+        "metadata_regex": 1.0,
+        "minhash_dedup": 1.0,
+        "llm_validator": 0.8095
+      }
+    }
+  },
+  "filter_pass_rates_overall": {
+    "generated": 234,
+    "after_length": 234,
+    "after_metadata": 234,
+    "after_dedup": 234,
+    "after_validator": 175,
+    "accepted": 175,
+    "rejected": 59,
+    "validator_evaluated": 223,
+    "validator_skipped": 11,
+    "overall": 0.7479,
+    "stage_rates": {
+      "length": 1.0,
+      "metadata_regex": 1.0,
+      "minhash_dedup": 1.0,
+      "llm_validator_evaluated_only": 0.7354,
+      "llm_validator_including_skipped": 0.7479
+    }
+  },
+  "dedup_threshold": 0.85,
+  "validator_categories_used": 10,
+  "known_limitations": [
+    {
+      "topic": "Input-neutral and response-judged prompts",
+      "citation": "IMPLEMENTATION_NOTES.md#llm02-expansion-findings; IMPLEMENTATION_NOTES.md#llm09-expansion-findings; IMPLEMENTATION_NOTES.md#llm10-expansion-findings",
+      "summary": "LLM02 repetition attacks, LLM09 hallucination/package probes, and LLM10 model_extraction_probing need response-aware or behavior-aware evaluation rather than single-prompt category judging."
+    },
+    {
+      "topic": "biased_output_elicitation taxonomy decision",
+      "citation": "IMPLEMENTATION_NOTES.md#llm04-expansion-findings",
+      "summary": "biased_output_elicitation was dropped from LLM04 and is better represented by LLM09 misinformation-style evaluation."
+    },
+    {
+      "topic": "embedding_poisoning_via_query taxonomy decision",
+      "citation": "IMPLEMENTATION_NOTES.md#llm04-expansion-findings",
+      "summary": "embedding_poisoning_via_query was moved from LLM04 planning into LLM08, where embedding and retrieval-layer behavior are the natural category boundary."
+    }
+  ]
+}

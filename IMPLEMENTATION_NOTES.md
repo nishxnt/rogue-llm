@@ -119,4 +119,200 @@ scoped, making high-faithfulness answers easier to produce.
 
 ---
 
-*Next phase: Phase 2 — Synthetic Attack Dataset Generator (`feat/phase-2-attack-generator`)*
+## Phase 2 — Synthetic Attack Dataset Generator
+
+**Branch:** `feat/phase-2-attack-generator`
+**Status:** In progress
+
+### 2.1 Canary Mutation Findings
+
+**OWASP category enforcement**
+The LLM mutator can drift into the wrong OWASP taxonomy or category label even when the prompt
+explicitly asks it to preserve `owasp_category`. This is a high-risk dataset integrity bug because
+the next nine categories would inherit the same failure mode at scale.
+
+Permanent rule: generated variants must always take `owasp_category` from the seed record in code,
+not from model output. The mutator prompt should still instruct the model to copy the field, but
+`src/attack_generation/mutator.py::_parse_variants()` is the source of truth and hardcodes the
+variant category from `seed["owasp_category"]`. Do not remove or weaken this pattern when changing
+the prompt, parser, or full-dataset builder.
+
+**Strategy drift: roleplay jailbreak**
+The first LLM01 canary produced roleplay variants that preserved the harmful request but stripped
+the fictional framing down to an ordinary request for exploit instructions. The validator correctly
+rejected those as not genuine prompt-injection attempts. Fix: add strategy-specific guidance for
+`roleplay_jailbreak` so the fictional persona/narrative is preserved as the mechanism that carries
+the instruction override.
+
+**Observation: indirect retrieval drift**
+One `indirect_via_retrieval` survivor drifted from "instructions embedded in retrieved document" to
+"assume the role of a penetration testing instructor." This is not blocking the canary, but the
+full run should track whether indirect retrieval also needs strategy-specific mutator guidance.
+
+### Strategy decisions during canary
+
+**LLM01 roleplay de-prioritized**
+Drop `roleplay_jailbreak` as a primary LLM01 generation strategy. The rerun showed only 1/3
+roleplay variants survived after the strategy guidance fix, which points to a structural mismatch
+rather than a prompt-tuning issue: the mutator collapses mechanism-implicit strategies, and the
+validator's category-coherence threshold requires an explicit prompt-injection mechanism.
+
+Keep `LLM01-0013`, the surviving Riven variant, because it is a real benchmark attack. Drop the two
+rejected roleplay variants permanently and do not regenerate them.
+
+**Strict prompt-injection definition**
+For LLM01, use the strict definition: the attack must make the instruction-override mechanism
+explicit. The broader interpretation, where fictional framing alone counts as prompt injection, is
+not the chosen project definition. Roleplay attacks that elicit harmful content without explicit
+instruction override belong in LLM05 (Improper Output Handling) or LLM09 (Misinformation), not
+LLM01.
+
+Implication: when LLM05 and LLM09 seeds are written later, mechanism-implicit roleplay framings are
+in scope there.
+
+**LLM01 final distribution target**
+Target 15 final LLM01 seeds with this strategy distribution:
+- `direct_override`: 4 total (1 canary + 3 new)
+- `indirect_via_retrieval`: 4 total (1 canary + 3 new)
+- `payload_splitting`: 3 total (1 canary + 2 new)
+- `multilingual_obfuscated`: 3 total (1 canary + 2 new)
+- `roleplay_jailbreak`: 1 total (canary only, no more)
+
+Keep the `_STRATEGY_GUIDANCE` mechanism in `mutator.py`. It may be needed for other strategies and
+categories, including mechanism-implicit cases such as possible LLM06 excessive-agency seeds. The
+`roleplay_jailbreak` guidance can remain for future use if roleplay seeds are explicitly re-added.
+
+### LLM01 expansion and validator decisions
+
+The 10-seed LLM01 expansion run used the `dataset-expander` skill and mutated only seeds
+`LLM01-seed-006` through `LLM01-seed-015`. Do not mutate LLM02+ content until explicitly instructed.
+
+Seed `LLM01-seed-008` (output-prefix priming) had 1/3 survival. Keep the surviving variant and do
+not iterate further on this seed; the two rejects collapsed into direct harmful-content requests
+without a clear prompt-injection override mechanism.
+
+**Validator fail-open bug**
+The LLM validator previously failed open: after three validator errors or JSON parse failures,
+`_validate_one()` returned `is_valid=True` with reasoning beginning `validator unavailable`. This is
+wrong for a quality filter because infrastructure failures silently admit unvalidated variants.
+
+Fix: the validator now fails closed. After exhausted retries, the variant is rejected with
+`rejection_category="validator_infrastructure_failure"` and a reason beginning
+`validator_json_parse_failure`. Content-level validator decisions are separately labeled
+`validator_content_rejection`, so rejected JSONL output distinguishes bad variants from broken
+tooling.
+
+**Validator token budget**
+The validator response contract is small: JSON with `is_valid` and `reasoning`. The failing
+`LLM01-0031` run hit the deterministic Groq error `max completion tokens reached before generating a
+valid document` on all three retries. Retrying unchanged could never fix this. The validator
+completion cap was `max_tokens=256`; it has been raised to `512` to give the JSON-mode validator
+enough room while keeping responses bounded.
+
+**Fail-open checkpoint audit**
+Audit of `attacks/v1/checkpoints/LLM01.jsonl` found one existing fail-open acceptance:
+`LLM01-0031` (`LLM01-seed-013`, `payload_splitting`). Manual review decision: keep it. The decoded
+payload is a clear system-prompt-disclosure instruction, and the failure was validator
+infrastructure, not attack quality.
+
+### LLM02 expansion findings
+
+The LLM02 Sensitive Information Disclosure expansion used 9 seeds and produced 24 accepted
+survivors in `attacks/v1/checkpoints/LLM02.jsonl`. Results were accepted as-is.
+
+Seed `LLM02-seed-006` (repetition attack for training-data leakage) had 0/3 survival for a
+structural validator reason: the current validator scores prompts, not model responses, while
+repetition attacks are only visible as a vulnerability when the response degenerates or regurgitates
+memorized content. Do not iterate on this seed during Phase 2. Revisit this in Phase 4 as a known
+validator limitation when response-aware evaluation is available.
+
+### LLM03 expansion findings
+
+The LLM03 Supply Chain expansion used 3 seeds and produced 6 accepted survivors in
+`attacks/v1/checkpoints/LLM03.jsonl`. Results were accepted as-is.
+
+`model_identity_probing` had 1/3 survival. This may indicate validator over-strictness at the LLM03
+category boundary because model identity and supply-chain metadata disclosure can be relevant setup
+for supply-chain targeting. Do not act now; revisit if this pattern repeats in LLM04+.
+
+Two near-duplicate mutator outputs reached the validator for `memorized_poisoned_artifact_probing`.
+This suggests the MinHash threshold of 0.85 may be too lenient for short, narrow prompts. Do not
+change it yet; revisit after 3+ categories show the same pattern.
+
+### LLM04 expansion findings
+
+The LLM04 Data and Model Poisoning expansion used 5 seeds and produced 9 accepted survivors in
+`attacks/v1/checkpoints/LLM04.jsonl` across 3 retained strategies:
+`backdoor_trigger_probing`, `memorized_poisoned_content`, and
+`poisoning_technique_solicitation`.
+
+Taxonomy decision: drop `biased_output_elicitation` from LLM04 and do not re-attempt it. Reframe
+`embedding_poisoning_via_query` for LLM08 later, where embedding and retrieval-layer behavior is
+the natural category boundary.
+
+### LLM07 expansion findings
+
+Source correction: the LLM07 category-description update was reported with the wrong OWASP URL. The
+correct OWASP 2025 System Prompt Leakage source is
+https://genai.owasp.org/llmrisk/llm072025-system-prompt-leakage/.
+
+The LLM07 System Prompt Leakage expansion used 9 seeds and produced 19 accepted survivors in
+`attacks/v1/checkpoints/LLM07.jsonl`. Results were accepted as-is.
+
+### LLM09 expansion findings
+
+Input-neutral attack validator limitation: `hallucinated_technical_detail` and
+`hallucinated_package_recommendation` strategies failed 0/3 each because their attacks are
+response-judged, not prompt-judged. The validator correctly sees no attack signal in the input.
+This is the same structural issue as LLM02 repetition attacks. These belong to a Phase 4 evaluation
+class: responses must be scored to detect them, prompts alone cannot. This will be addressed in the
+Phase 4 evaluation engine, not Phase 2 generation.
+
+Strategy-specific mutator guidance was added for `false_premise_acceptance` and
+`unsafe_code_with_confident_framing` to preserve the planted false-premise mechanism and the
+explicit unsafe-constraint list during LLM09 reruns.
+
+### LLM10 expansion findings
+
+The LLM10 Unbounded Consumption expansion used 7 seeds and produced 17 accepted survivors in
+`attacks/v1/checkpoints/LLM10.jsonl` from 21 generated variants. Stage 1 length, Stage 2 metadata,
+and Stage 3 MinHash dedup retained all 21 variants; the LLM validator accepted 17 and rejected 4.
+
+Known prompt-judged validator limitation: `model_extraction_probing` failed 0/3 because model
+extraction via API is primarily a repeated-query behavioral pattern, not always visible from a
+single prompt in isolation. One `variable_length_input_flood` variant was also rejected as benign
+large-document analysis. `denial_of_wallet`, `output_amplification`, and
+`api_side_channel_timing` all survived 3/3 in this run, despite being expected Phase 4
+response/behavior-scoring watchlist strategies.
+
+`role_rule_enumeration` had 0/3 survival and `context_format_inference` had 1/3 survival because
+the validator currently defines LLM07 narrowly as extraction of embedded sensitive data rather than
+any inference about system-prompt content. Accepted as-is. These adjacent attack patterns may move
+to LLM01 or a future LLM07.1 in v1.1.
+
+### Phase 2 closeout
+
+Phase 2 generation is complete at 175 accepted attacks across all 10 OWASP LLM Top 10 2025
+categories. This is the right number for v0.2.0 even though the original planning target was 200:
+the final dataset keeps only category-coherent, quality-filtered variants and avoids padding weak
+strategies that the validator correctly rejected or that require response/behavior-aware evaluation.
+The canonical assembled dataset is `attacks/v1/dataset.jsonl`; category checkpoints remain in
+`attacks/v1/checkpoints/` for provenance and debugging.
+
+Engineering patterns introduced during Phase 2:
+
+- Protocol-based dependencies for generator components, especially LLM08, so tests can exercise
+  generation behavior without live model calls or mutable vector-store state.
+- Fail-closed validation: validator infrastructure failures now reject variants with explicit
+  rejection categories instead of accepting by default.
+- Strategy-specific mutator guidance via `_STRATEGY_GUIDANCE`, preserving mechanisms such as
+  roleplay framing, false-premise misinformation, and unsafe-code constraint lists.
+- Checkpoint-per-variant persistence, so interrupted generation runs retain accepted survivors and
+  can be audited category by category.
+
+Open questions for Phase 3:
+
+- Promote the checkpointing pattern from `src/evaluation/baseline.py` and Phase 2 generation into a
+  shared cache/persistence utility without changing saved artifact formats.
+- Ensure `AttackRunner` consumes LLM08 structured entries correctly, including `target_query`,
+  `poisoned_doc_content`, similarity thresholds, and retrieval metadata.
