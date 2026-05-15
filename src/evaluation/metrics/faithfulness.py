@@ -46,7 +46,7 @@ class FaithfulnessMetric:
     """
 
     name = "faithfulness"
-    judge_version = "ragas-collections-with-groq-fallback-v2"
+    judge_version = "ragas-collections-with-groq-fallback-v3"
 
     def __init__(
         self,

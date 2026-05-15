@@ -282,6 +282,8 @@ async def _score_attacks(
             try:
                 return await engine._score_with_cache(metric, attack)
             except Exception as exc:  # pragma: no cover - exercised by live judge failures
+                if _is_transient_metric_error(exc):
+                    raise
                 result = MetricResult(
                     attack_id=attack.attack_id,
                     metric_name=metric.name,
@@ -304,6 +306,20 @@ async def _score_attacks(
 
     tasks = [score_one(metric, attack) for attack in attacks for metric in engine.metrics]
     return list(await asyncio.gather(*tasks))
+
+
+def _is_transient_metric_error(exc: Exception) -> bool:
+    text = f"{type(exc).__name__}: {exc}"
+    transient_markers = (
+        "RateLimitError",
+        "rate_limit",
+        "rate limit",
+        "429",
+        "tokens per minute",
+        "TPM",
+        "TPD",
+    )
+    return any(marker in text for marker in transient_markers)
 
 
 @app.command(hidden=True)
