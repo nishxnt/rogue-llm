@@ -94,6 +94,7 @@ def build_deepeval_hallucination_scorer(
             model=GroqDeepEvalLLM(model=judge_model),
             include_reason=True,
             strict_mode=False,
+            async_mode=False,
         ),
     )
 
