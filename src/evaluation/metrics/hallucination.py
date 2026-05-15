@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Protocol, cast
 
+from deepeval.models import DeepEvalBaseLLM
+from langchain_groq import ChatGroq
+
+from src.config import get_settings
 from src.evaluation.config import PRIMARY_JUDGE_MODEL
 from src.evaluation.engine import AttackEvaluationInput, MetricResult
 
@@ -80,18 +84,45 @@ def build_hallucination_test_case(attack: AttackEvaluationInput) -> Any:
 def build_deepeval_hallucination_scorer(
     judge_model: str = PRIMARY_JUDGE_MODEL,
 ) -> DeepEvalHallucinationScorer:
-    """Build DeepEval's HallucinationMetric with the configured judge model."""
+    """Build DeepEval's HallucinationMetric with a Groq-backed custom judge."""
     from deepeval.metrics import HallucinationMetric as DeepEvalHallucinationMetric
 
     return cast(
         "DeepEvalHallucinationScorer",
         DeepEvalHallucinationMetric(
             threshold=0.5,
-            model=judge_model,
+            model=GroqDeepEvalLLM(model=judge_model),
             include_reason=True,
             strict_mode=False,
         ),
     )
+
+
+class GroqDeepEvalLLM(DeepEvalBaseLLM):
+    """DeepEval custom LLM wrapper for Groq chat models."""
+
+    def __init__(self, *, model: str) -> None:
+        self.model_name = model
+        super().__init__(model=model)
+
+    def load_model(self, *_args: Any, **_kwargs: Any) -> Any:
+        settings = get_settings()
+        return ChatGroq(
+            model_name=self.model_name,
+            temperature=0.0,
+            api_key=settings.groq_api_key.get_secret_value(),
+        )
+
+    def generate(self, prompt: str, *_args: object, **_kwargs: object) -> str:
+        response = cast("ChatGroq", self.model).invoke(prompt)
+        return str(response.content)
+
+    async def a_generate(self, prompt: str, *_args: object, **_kwargs: object) -> str:
+        response = await cast("ChatGroq", self.model).ainvoke(prompt)
+        return str(response.content)
+
+    def get_model_name(self) -> str:
+        return f"groq:{self.model_name}"
 
 
 def _safe_jsonable(value: Any) -> object:
