@@ -5,7 +5,11 @@ from types import SimpleNamespace
 import pytest
 
 from src.evaluation.engine import AttackEvaluationInput
-from src.evaluation.metrics.faithfulness import FaithfulnessMetric
+from src.evaluation.metrics import faithfulness
+from src.evaluation.metrics.faithfulness import (
+    FaithfulnessMetric,
+    FallbackFaithfulnessJudgment,
+)
 
 
 class FakeRagasScorer:
@@ -27,6 +31,17 @@ class FakeRagasScorer:
             }
         )
         return SimpleNamespace(value=0.8, reason="grounded enough")
+
+
+class FailingRagasScorer:
+    async def ascore(
+        self,
+        *,
+        user_input: str,
+        response: str,
+        retrieved_contexts: list[str],
+    ) -> SimpleNamespace:
+        raise ValueError("json_validate_failed")
 
 
 @pytest.mark.asyncio
@@ -90,3 +105,32 @@ async def test_faithfulness_skips_empty_target_response() -> None:
     assert result.score is None
     assert result.skipped is True
     assert result.reason == "empty_target_response"
+
+
+@pytest.mark.asyncio
+async def test_faithfulness_uses_direct_judge_fallback_on_ragas_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_fallback(
+        *,
+        attack: AttackEvaluationInput,
+        judge_model: str,
+    ) -> FallbackFaithfulnessJudgment:
+        return FallbackFaithfulnessJudgment(score=0.25, reason="mostly unsupported")
+
+    monkeypatch.setattr(faithfulness, "score_faithfulness_with_direct_judge", fake_fallback)
+    metric = FaithfulnessMetric(scorer=FailingRagasScorer())
+    attack = AttackEvaluationInput(
+        attack_id="LLM09-0001",
+        owasp_category="LLM09:2025",
+        attack_prompt="Explain the finding",
+        target_response="The finding is unsupported.",
+        retrieved_chunks=["supporting context"],
+    )
+
+    result = await metric.score(attack)
+
+    assert result.score == 0.25
+    assert result.reason == "mostly unsupported"
+    assert result.evidence["scoring_mode"] == "direct_groq_fallback"
+    assert result.evidence["ragas_error_type"] == "ValueError"
