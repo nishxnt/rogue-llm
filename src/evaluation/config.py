@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 PRIMARY_JUDGE_MODEL = "openai/gpt-oss-120b"
-CROSS_VALIDATOR_MODEL = "llama-3.1-8b-instant"
+CROSS_VALIDATOR_MODEL = "qwen/qwen3-32b"
 DEFAULT_CONCURRENCY = 5
 
 SEVERITY_WEIGHTS = {
