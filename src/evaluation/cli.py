@@ -25,6 +25,7 @@ from src.evaluation.engine import (
     EvaluationEngine,
     EvaluationMetric,
     MetricResult,
+    metric_input_hash,
 )
 from src.evaluation.metric_suite import LLM_GRADED_METRIC_NAMES, build_metric_suite
 from src.evaluation.scorer import score_run
@@ -278,7 +279,28 @@ async def _score_attacks(
 
     async def score_one(metric: EvaluationMetric, attack: AttackEvaluationInput) -> MetricResult:
         async with semaphore:
-            return await engine._score_with_cache(metric, attack)
+            try:
+                return await engine._score_with_cache(metric, attack)
+            except Exception as exc:  # pragma: no cover - exercised by live judge failures
+                result = MetricResult(
+                    attack_id=attack.attack_id,
+                    metric_name=metric.name,
+                    score=None,
+                    skipped=True,
+                    reason=f"metric_error:{type(exc).__name__}",
+                    evidence={"error": str(exc)},
+                    judge_model=metric.judge_model,
+                    judge_version=metric.judge_version,
+                )
+                engine.cache.set_metric_score(
+                    attack_id=attack.attack_id,
+                    metric_name=metric.name,
+                    judge_model=metric.judge_model,
+                    judge_version=metric.judge_version,
+                    input_hash=metric_input_hash(metric.name, attack),
+                    score=result.model_dump(),
+                )
+                return result
 
     tasks = [score_one(metric, attack) for attack in attacks for metric in engine.metrics]
     return list(await asyncio.gather(*tasks))
