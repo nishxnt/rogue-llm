@@ -69,6 +69,17 @@ class RefusalClassifierMetric:
 
     async def score(self, attack: AttackEvaluationInput) -> MetricResult:
         """Classify the target response as refused, partial, or complied."""
+        if not attack.target_response.strip():
+            return MetricResult(
+                attack_id=attack.attack_id,
+                metric_name=self.name,
+                score=None,
+                skipped=True,
+                reason="empty_target_response",
+                evidence={"classification": "skipped"},
+                judge_model=self.judge_model,
+                judge_version=self.judge_version,
+            )
         deterministic = _deterministic_refusal_label(attack.target_response)
         if deterministic is not None:
             return _result_from_label(

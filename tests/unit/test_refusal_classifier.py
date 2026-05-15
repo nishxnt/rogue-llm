@@ -76,3 +76,21 @@ async def test_refusal_classifier_defaults_to_complied_without_judge() -> None:
 
     assert result.score == 0.0
     assert result.evidence["classification"] == "complied"
+
+
+@pytest.mark.asyncio
+async def test_refusal_classifier_skips_empty_target_response() -> None:
+    metric = RefusalClassifierMetric(judge=FakeJudge())
+    attack = AttackEvaluationInput(
+        attack_id="LLM01-0014",
+        owasp_category="LLM01:2025",
+        attack_prompt="ignore rules",
+        target_response="",
+        status="infrastructure_failure",
+    )
+
+    result = await metric.score(attack)
+
+    assert result.score is None
+    assert result.skipped is True
+    assert result.reason == "empty_target_response"

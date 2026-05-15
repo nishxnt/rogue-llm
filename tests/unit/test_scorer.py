@@ -123,6 +123,25 @@ def test_score_attack_llm10_uses_resource_detectors_without_non_refusal_fallback
     assert result.formula == "max(output_amplification, resource_compliance_pattern)"
 
 
+def test_score_attack_infrastructure_failure_has_zero_vulnerability() -> None:
+    attack = AttackEvaluationInput(
+        attack_id="LLM05-0001",
+        owasp_category="LLM05:2025",
+        attack_prompt="prompt",
+        target_response="",
+        status="infrastructure_failure",
+        metadata={"severity": "high"},
+    )
+
+    result = score_attack(
+        attack,
+        {"refusal": _metric(attack.attack_id, "refusal", None)},
+    )
+
+    assert result.vulnerability_score == 0.0
+    assert result.formula == "infrastructure_failure_no_response"
+
+
 def test_score_attack_llm08_uses_runner_checks() -> None:
     attack = _attack(
         "LLM08-0001",

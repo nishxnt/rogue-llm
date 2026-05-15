@@ -49,6 +49,16 @@ class FaithfulnessMetric:
 
     async def score(self, attack: AttackEvaluationInput) -> MetricResult:
         """Score one attack result with RAGAS Faithfulness."""
+        if not attack.target_response.strip():
+            return MetricResult(
+                attack_id=attack.attack_id,
+                metric_name=self.name,
+                score=None,
+                skipped=True,
+                reason="empty_target_response",
+                judge_model=self.judge_model,
+                judge_version=self.judge_version,
+            )
         if not attack.retrieved_chunks:
             return MetricResult(
                 attack_id=attack.attack_id,

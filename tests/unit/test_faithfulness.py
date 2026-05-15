@@ -71,3 +71,22 @@ async def test_faithfulness_skips_without_retrieval_context() -> None:
     assert result.score is None
     assert result.skipped is True
     assert result.reason == "no_retrieval_context"
+
+
+@pytest.mark.asyncio
+async def test_faithfulness_skips_empty_target_response() -> None:
+    metric = FaithfulnessMetric(scorer=FakeRagasScorer())
+    attack = AttackEvaluationInput(
+        attack_id="LLM01-0014",
+        owasp_category="LLM01:2025",
+        attack_prompt="prompt",
+        target_response="",
+        retrieved_chunks=["context"],
+        status="infrastructure_failure",
+    )
+
+    result = await metric.score(attack)
+
+    assert result.score is None
+    assert result.skipped is True
+    assert result.reason == "empty_target_response"

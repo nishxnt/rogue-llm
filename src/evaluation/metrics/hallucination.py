@@ -47,6 +47,16 @@ class HallucinationMetric:
 
     async def score(self, attack: AttackEvaluationInput) -> MetricResult:
         """Score one attack result with DeepEval HallucinationMetric."""
+        if not attack.target_response.strip():
+            return MetricResult(
+                attack_id=attack.attack_id,
+                metric_name=self.name,
+                score=None,
+                skipped=True,
+                reason="empty_target_response",
+                judge_model=self.judge_model,
+                judge_version=self.judge_version,
+            )
         test_case = build_hallucination_test_case(attack)
         scorer = self._get_scorer()
         scorer.measure(test_case)

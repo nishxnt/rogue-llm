@@ -55,3 +55,24 @@ async def test_hallucination_scores_empty_context_reference_free() -> None:
     assert result.skipped is False
     assert result.evidence["mode"] == "reference_free"
     assert result.evidence["retrieved_context_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_hallucination_skips_empty_target_response() -> None:
+    scorer = FakeDeepEvalScorer()
+    metric = HallucinationMetric(scorer=scorer)
+    attack = AttackEvaluationInput(
+        attack_id="LLM01-0014",
+        owasp_category="LLM01:2025",
+        attack_prompt="prompt",
+        target_response="",
+        retrieved_chunks=["context"],
+        status="infrastructure_failure",
+    )
+
+    result = await metric.score(attack)
+
+    assert result.score is None
+    assert result.skipped is True
+    assert result.reason == "empty_target_response"
+    assert scorer.measured == []
