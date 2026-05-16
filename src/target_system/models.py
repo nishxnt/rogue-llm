@@ -30,6 +30,8 @@ class Response(BaseModel):
             "allowed",
             "blocked_l1",
             "blocked_l2",
+            "classifier_unavailable_blocked",
+            "classifier_unavailable_passthrough",
             "blocked_l3_pii",
             "blocked_l3_leak",
             "blocked_l3_unsafe_pattern",

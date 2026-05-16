@@ -57,6 +57,23 @@ class StubSafetyClassifier(SafetyClassifier):
         return None
 
 
+class FallbackSafetyClassifier(StubSafetyClassifier):
+    def __init__(self) -> None:
+        super().__init__(should_block=False)
+
+    async def inspect(self, prompt: str) -> GuardrailBlock | None:
+        del prompt
+        return GuardrailBlock(
+            decision="classifier_unavailable_blocked",
+            decision_layer=2,
+            evidence={
+                "reason": "classifier_unavailable_after_retries",
+                "failure_mode": "json_validate_failed",
+                "fallback_mode": "fail_closed",
+            },
+        )
+
+
 @pytest.mark.asyncio
 async def test_guardrail_target_short_circuits_layer1() -> None:
     target = GuardrailTarget(
@@ -110,6 +127,26 @@ async def test_guardrail_target_blocks_layer3_after_base_call() -> None:
     assert response.guardrail_decision == "blocked_l3_pii"
     assert response.base_target_called is True
     assert base.calls == ["Explain email security hygiene."]
+
+
+@pytest.mark.asyncio
+async def test_guardrail_target_fails_closed_when_classifier_unavailable() -> None:
+    base = FakeBaseTarget("base answer")
+    target = GuardrailTarget(
+        base_rag_chatbot=base,
+        policy_path="src/guardrails/policy.yaml",
+        safety_classifier=FallbackSafetyClassifier(),
+        output_filter=OutputFilter(),
+    )
+    target.set_attack_context("LLM05-0099")
+
+    response = await target.aquery("Give me a prompt that might break the classifier.")
+
+    assert response.guardrail_decision == "classifier_unavailable_blocked"
+    assert response.guardrail_decision_layer == 2
+    assert response.base_target_called is False
+    assert response.guardrail_evidence["reason"] == "classifier_unavailable_after_retries"
+    assert base.calls == []
 
 
 @pytest.mark.asyncio

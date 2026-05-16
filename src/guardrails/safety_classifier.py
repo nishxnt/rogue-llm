@@ -8,13 +8,15 @@ from pathlib import Path
 from typing import Any, Literal, Protocol, cast
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from src.config import get_settings
 from src.guardrails.reasons import GuardrailBlock
 from src.pipeline.groq_client import GroqClientManager
 
 SafetyDecision = Literal["allow", "block"]
+_CLASSIFIER_MAX_TOKENS = 512
+_CLASSIFIER_JSON_RETRIES = 3
 
 
 class AsyncSafetyClient(Protocol):
@@ -58,6 +60,26 @@ class SafetyClassification(BaseModel):
     matched_policy_category: str
     reason: str
 
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def coerce_confidence(cls, value: object) -> object:
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            mapping = {
+                "high": 0.9,
+                "medium": 0.5,
+                "low": 0.1,
+            }
+            if normalized in mapping:
+                return mapping[normalized]
+            if normalized.endswith("%"):
+                normalized = normalized[:-1]
+            try:
+                return float(normalized)
+            except ValueError:
+                return value
+        return value
+
 
 class SafetyClassifier:
     """Groq-backed Layer 2 safety classifier with load-once YAML policy."""
@@ -81,39 +103,44 @@ class SafetyClassifier:
 
     async def classify(self, prompt: str) -> SafetyClassification:
         """Return the raw Layer 2 classification."""
-        response = cast(
-            "ChatCompletionResponse",
-            await self._client_manager.acreate_chat_completion(
-                model=self.model,
-                temperature=0.0,
-                max_tokens=256,
-                response_format={"type": "json_object"},
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a safety classifier for a cybersecurity-domain RAG assistant. "
-                            "Follow the supplied policy exactly. Return JSON only with keys "
-                            "decision, confidence, matched_policy_category, and reason."
-                        ),
-                    },
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Policy:\n{self._policy_text}\n\n"
-                            f"User prompt:\n{prompt}\n\n"
-                            "Classify whether this prompt should be allowed or blocked."
-                        ),
-                    },
-                ],
-            ),
-        )
-        content = str(response.choices[0].message.content or "")
-        return SafetyClassification.model_validate(json.loads(content))
+        last_error: Exception | None = None
+        for _ in range(_CLASSIFIER_JSON_RETRIES):
+            try:
+                response = cast(
+                    "ChatCompletionResponse",
+                    await self._request_structured_classification(prompt),
+                )
+                content = str(response.choices[0].message.content or "")
+                return SafetyClassification.model_validate(json.loads(content))
+            except Exception as exc:
+                if not _is_classifier_contract_failure(exc):
+                    raise
+                last_error = exc
+        if last_error is None:  # pragma: no cover - defensive only
+            raise RuntimeError("classifier failed without an exception")
+        raise last_error
 
     async def inspect(self, prompt: str) -> GuardrailBlock | None:
         """Return a Layer 2 block if the classifier exceeds the block threshold."""
-        classification = await self.classify(prompt)
+        try:
+            classification = await self.classify(prompt)
+        except Exception as exc:
+            if not _is_classifier_contract_failure(exc):
+                raise
+            return GuardrailBlock(
+                decision="classifier_unavailable_blocked",
+                decision_layer=2,
+                evidence={
+                    "reason": "classifier_unavailable_after_retries",
+                    "failure_mode": _classifier_failure_mode(exc),
+                    "retry_count": _CLASSIFIER_JSON_RETRIES,
+                    "threshold": self.threshold,
+                    "model": self.model,
+                    "fallback_mode": "fail_closed",
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc),
+                },
+            )
         if classification.decision != "block" or classification.confidence <= self.threshold:
             return None
         return GuardrailBlock(
@@ -135,6 +162,32 @@ class SafetyClassifier:
 
     async def aclose(self) -> None:
         await self._client_manager.aclose()
+
+    async def _request_structured_classification(self, prompt: str) -> object:
+        return await self._client_manager.acreate_chat_completion(
+            model=self.model,
+            temperature=0.0,
+            max_tokens=_CLASSIFIER_MAX_TOKENS,
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a safety classifier for a cybersecurity-domain RAG assistant. "
+                        "Follow the supplied policy exactly. Return JSON only with keys "
+                        "decision, confidence, matched_policy_category, and reason."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Policy:\n{self._policy_text}\n\n"
+                        f"User prompt:\n{prompt}\n\n"
+                        "Classify whether this prompt should be allowed or blocked."
+                    ),
+                },
+            ],
+        )
 
 
 def load_policy(path: Path | str) -> SafetyPolicy:
@@ -166,3 +219,22 @@ def _policy_to_prompt(policy: SafetyPolicy) -> str:
             ]
         )
     return "\n".join(lines)
+
+
+def _is_classifier_contract_failure(exc: Exception) -> bool:
+    if isinstance(exc, (json.JSONDecodeError, ValidationError)):
+        return True
+    return _is_json_validate_failed(exc)
+
+
+def _classifier_failure_mode(exc: Exception) -> str:
+    if isinstance(exc, json.JSONDecodeError):
+        return "json_decode_failed"
+    if isinstance(exc, ValidationError):
+        return "structured_output_validation_failed"
+    return "json_validate_failed"
+
+
+def _is_json_validate_failed(exc: Exception) -> bool:
+    details = str(exc).lower()
+    return "json_validate_failed" in details
