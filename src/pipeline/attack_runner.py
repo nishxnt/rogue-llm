@@ -69,6 +69,11 @@ class AttackResult(BaseModel):
     retrieved_doc_ids: list[str] = Field(default_factory=list)
     error_type: str | None = None
     error_message: str | None = None
+    guardrail_decision: str | None = None
+    guardrail_decision_layer: int | None = None
+    guardrail_evidence: dict[str, object] = Field(default_factory=dict)
+    base_target_called: bool | None = None
+    guardrail_timestamp: str | None = None
 
 
 class AttackRunner:
@@ -165,11 +170,14 @@ class AttackRunner:
                     "llm08_checks": llm08_result.llm08_checks,
                 }
             else:
+                set_attack_context = getattr(self.target_system, "set_attack_context", None)
+                if callable(set_attack_context):
+                    set_attack_context(attack_id)
                 response = await retry_transient(
                     lambda: self.target_system.aquery(prompt),
                     sleeper=self.retry_sleeper,
                 )
-                extra_fields = {}
+                extra_fields = _guardrail_extra_fields(response)
             result = AttackResult(
                 attack_id=attack_id,
                 owasp_category=str(attack["owasp_category"]),
@@ -228,8 +236,32 @@ class AttackRunner:
         with path.open("w", encoding="utf-8") as fh:
             for result in results:
                 fh.write(result.model_dump_json() + "\n")
+        self._write_guardrail_decisions(run_dir, results)
         log.info("Attack results written", path=str(path), count=len(results))
         return path
+
+    def _write_guardrail_decisions(self, run_dir: Path, results: Sequence[AttackResult]) -> None:
+        decision_rows = []
+        for result in results:
+            if result.guardrail_decision is None:
+                continue
+            decision_rows.append(
+                {
+                    "attack_id": result.attack_id,
+                    "decision": result.guardrail_decision,
+                    "decision_layer": result.guardrail_decision_layer,
+                    "evidence": result.guardrail_evidence,
+                    "base_target_called": result.base_target_called,
+                    "timestamp": result.guardrail_timestamp,
+                }
+            )
+        if not decision_rows:
+            return
+        path = run_dir / "guardrail_decisions.jsonl"
+        with path.open("w", encoding="utf-8") as fh:
+            for row in decision_rows:
+                fh.write(json.dumps(row, sort_keys=True) + "\n")
+        log.info("Guardrail decisions written", path=str(path), count=len(decision_rows))
 
 
 def _stratified_sample(attacks: Sequence[dict[str, Any]], n: int) -> list[dict[str, Any]]:
@@ -312,6 +344,9 @@ def _target_version(target_system: AsyncTargetSystem, target_model: str) -> str:
         "embedding_model": embedding_model,
         "search_type": "similarity",
     }
+    guardrail_fingerprint = getattr(target_system, "guardrail_fingerprint", None)
+    if guardrail_fingerprint is not None:
+        retrieval_config["guardrail_fingerprint"] = str(guardrail_fingerprint)
     return build_target_version(
         target_model=target_model,
         system_prompt=SYSTEM_PROMPT,
@@ -322,6 +357,18 @@ def _target_version(target_system: AsyncTargetSystem, target_model: str) -> str:
 
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _guardrail_extra_fields(response: Response) -> dict[str, Any]:
+    if response.guardrail_decision is None:
+        return {}
+    return {
+        "guardrail_decision": response.guardrail_decision,
+        "guardrail_decision_layer": response.guardrail_decision_layer,
+        "guardrail_evidence": response.guardrail_evidence,
+        "base_target_called": response.base_target_called,
+        "guardrail_timestamp": response.guardrail_timestamp,
+    }
 
 
 @app.command()

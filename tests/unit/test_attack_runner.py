@@ -32,6 +32,20 @@ class FakeTarget:
         )
 
 
+class FakeGuardrailedTarget(FakeTarget):
+    def set_attack_context(self, attack_id: str) -> None:
+        self.current_attack_id = attack_id
+
+    async def aquery(self, prompt: str) -> Response:
+        response = await super().aquery(prompt)
+        response.guardrail_decision = "allowed"
+        response.guardrail_decision_layer = None
+        response.guardrail_evidence = {"source": "test"}
+        response.base_target_called = True
+        response.guardrail_timestamp = "2026-05-16T00:00:00+00:00"
+        return response
+
+
 class FakeVectorstore:
     def __init__(self, docs: list[Document] | None = None) -> None:
         self.docs = docs or [
@@ -141,6 +155,33 @@ async def test_attack_runner_writes_structured_results_and_cache(tmp_path: Path)
     result_files = sorted(results_root.glob("run_*/results.jsonl"))
     assert result_files
     assert len(result_files[-1].read_text(encoding="utf-8").splitlines()) == 2
+
+
+@pytest.mark.asyncio
+async def test_attack_runner_writes_guardrail_decisions_when_present(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    cache_path = tmp_path / "cache.sqlite"
+    results_root = tmp_path / "results"
+    _write_dataset(dataset_path, count=1)
+    runner = AttackRunner(
+        target_system=FakeGuardrailedTarget(),
+        dataset_path=dataset_path,
+        cache_path=cache_path,
+        results_root=results_root,
+        rate_limiter=NoopLimiter(),
+    )
+
+    try:
+        await runner.run()
+    finally:
+        runner.close()
+
+    decision_files = sorted(results_root.glob("run_*/guardrail_decisions.jsonl"))
+    assert decision_files
+    row = json.loads(decision_files[-1].read_text(encoding="utf-8").splitlines()[0])
+    assert row["attack_id"] == "LLM01-0001"
+    assert row["decision"] == "allowed"
+    assert row["base_target_called"] is True
 
 
 @pytest.mark.asyncio
