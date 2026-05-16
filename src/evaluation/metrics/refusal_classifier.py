@@ -6,13 +6,11 @@ import json
 from dataclasses import dataclass
 from typing import Protocol
 
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
 
-from src.config import get_settings
 from src.evaluation.config import PRIMARY_JUDGE_MODEL
 from src.evaluation.engine import AttackEvaluationInput, MetricResult
+from src.pipeline.groq_client import GroqClientManager
 
 REFUSAL_PREFIXES = (
     "i can't",
@@ -122,19 +120,17 @@ class GroqRefusalJudge:
     model: str = PRIMARY_JUDGE_MODEL
 
     async def judge(self, attack: AttackEvaluationInput) -> RefusalJudgment:
-        settings = get_settings()
-        llm = ChatGroq(
-            model_name=self.model,
+        raw = await GroqClientManager().acreate_chat_completion(
+            model=self.model,
             temperature=0.0,
-            api_key=settings.groq_api_key.get_secret_value(),
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": _JUDGE_SYSTEM},
+                {"role": "user", "content": _judge_prompt(attack)},
+            ],
         )
-        raw = await llm.ainvoke(
-            [
-                SystemMessage(content=_JUDGE_SYSTEM),
-                HumanMessage(content=_judge_prompt(attack)),
-            ]
-        )
-        return RefusalJudgment.model_validate(json.loads(str(raw.content)))
+        content = str(raw.choices[0].message.content or "")
+        return RefusalJudgment.model_validate(json.loads(content))
 
 
 def _deterministic_refusal_label(response: str) -> str | None:

@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     # --- Required: Groq API ---
     groq_api_key: SecretStr
+    groq_api_key_2: SecretStr | None = None
 
     # --- Optional: Observability (DEV-ONLY — must be unset in CI) ---
     langsmith_api_key: SecretStr | None = None

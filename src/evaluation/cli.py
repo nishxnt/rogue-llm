@@ -29,6 +29,12 @@ from src.evaluation.engine import (
 )
 from src.evaluation.metric_suite import LLM_GRADED_METRIC_NAMES, build_metric_suite
 from src.evaluation.scorer import score_run
+from src.pipeline.groq_client import (
+    PRE_FLIGHT_MIN_COMBINED_TOKENS,
+    GroqClientManager,
+    GroqPreflightBudget,
+    combined_remaining_tokens,
+)
 
 app = typer.Typer(help="Phase 4 evaluation scoring.")
 
@@ -88,6 +94,13 @@ DeterministicOnlyOption = Annotated[
         help="Disable live LLM judges for hybrid injection/refusal metrics.",
     ),
 ]
+SkipPreflightOption = Annotated[
+    bool,
+    typer.Option(
+        "--skip-preflight",
+        help="Skip Groq token-budget preflight probe before scoring.",
+    ),
+]
 
 _DEFAULT_CACHE_PATH = Path("cache/results_cache.sqlite")
 _DEFAULT_OUTPUT_ROOT = Path("results")
@@ -101,6 +114,7 @@ def full(
     concurrency: ConcurrencyOption = DEFAULT_CONCURRENCY,
     judge_model: JudgeModelOption = PRIMARY_JUDGE_MODEL,
     deterministic_only: DeterministicOnlyOption = False,
+    skip_preflight: SkipPreflightOption = False,
 ) -> None:
     """Score every attack result and write scores.jsonl plus risk_scores.json."""
     _run_score_command(
@@ -113,6 +127,7 @@ def full(
         sample_size=None,
         seed=DEFAULT_RANDOM_SEED,
         mode="full",
+        skip_preflight=skip_preflight,
     )
 
 
@@ -126,6 +141,7 @@ def sample(
     judge_model: JudgeModelOption = PRIMARY_JUDGE_MODEL,
     seed: SeedOption = DEFAULT_RANDOM_SEED,
     deterministic_only: DeterministicOnlyOption = False,
+    skip_preflight: SkipPreflightOption = False,
 ) -> None:
     """Score a deterministic stratified sample for development iteration."""
     _run_score_command(
@@ -138,6 +154,7 @@ def sample(
         sample_size=n,
         seed=seed,
         mode="sample",
+        skip_preflight=skip_preflight,
     )
 
 
@@ -149,6 +166,7 @@ def resume(
     concurrency: ConcurrencyOption = DEFAULT_CONCURRENCY,
     judge_model: JudgeModelOption = PRIMARY_JUDGE_MODEL,
     deterministic_only: DeterministicOnlyOption = False,
+    skip_preflight: SkipPreflightOption = False,
 ) -> None:
     """Resume scoring from cache, filling missing metric calls."""
     _run_score_command(
@@ -161,6 +179,7 @@ def resume(
         sample_size=None,
         seed=DEFAULT_RANDOM_SEED,
         mode="resume",
+        skip_preflight=skip_preflight,
     )
 
 
@@ -215,7 +234,26 @@ def _run_score_command(
     sample_size: int | None,
     seed: int,
     mode: str,
+    skip_preflight: bool,
 ) -> None:
+    if not skip_preflight:
+        preflight = asyncio.run(probe_groq_token_budgets(model=judge_model))
+        for budget in preflight:
+            typer.echo(
+                f"Preflight {budget.key_name}: "
+                f"remaining_tokens={budget.remaining_tokens if budget.remaining_tokens is not None else 'unknown'} "
+                f"reset_tokens={budget.reset_tokens or 'unknown'}"
+            )
+        combined_tokens = combined_remaining_tokens(preflight)
+        if combined_tokens < PRE_FLIGHT_MIN_COMBINED_TOKENS:
+            retry_after = _format_retry_after(preflight)
+            typer.echo(
+                "Insufficient TPD budget across configured keys. "
+                f"Primary: {_remaining_label(preflight, 'primary')} tokens. "
+                f"Secondary: {_remaining_label(preflight, 'secondary')} tokens. "
+                f"Retry after: {retry_after}."
+            )
+            raise typer.Exit(code=1)
     scores_path, risk_path, attack_count, system_risk = asyncio.run(
         score_results(
             results_path=results_path,
@@ -232,6 +270,11 @@ def _run_score_command(
     typer.echo(f"Scores: {scores_path}")
     typer.echo(f"Risk: {risk_path}")
     typer.echo(f"System Risk Score: {system_risk:.4f}")
+
+
+async def probe_groq_token_budgets(model: str) -> list[GroqPreflightBudget]:
+    """Probe the configured Groq keys and return token-budget headers."""
+    return await GroqClientManager().probe_token_budgets(model=model)
 
 
 async def score_results(
@@ -320,6 +363,22 @@ def _is_transient_metric_error(exc: Exception) -> bool:
         "TPD",
     )
     return any(marker in text for marker in transient_markers)
+
+
+def _remaining_label(budgets: list[GroqPreflightBudget], key_name: str) -> str:
+    for budget in budgets:
+        if budget.key_name == key_name:
+            return (
+                str(budget.remaining_tokens) if budget.remaining_tokens is not None else "unknown"
+            )
+    return "not configured"
+
+
+def _format_retry_after(budgets: list[GroqPreflightBudget]) -> str:
+    parts = [
+        f"{budget.key_name}={budget.reset_tokens}" for budget in budgets if budget.reset_tokens
+    ]
+    return ", ".join(parts) if parts else "unknown"
 
 
 @app.command(hidden=True)

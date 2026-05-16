@@ -7,12 +7,11 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
-from groq import AsyncGroq
 from pydantic import BaseModel, Field
 
-from src.config import get_settings
 from src.evaluation.config import PRIMARY_JUDGE_MODEL
 from src.evaluation.engine import AttackEvaluationInput, MetricResult
+from src.pipeline.groq_client import GroqClientManager
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -171,13 +170,17 @@ def build_ragas_faithfulness_scorer(
     ``Faithfulness(...).ascore(user_input=..., response=..., retrieved_contexts=...)``.
     """
     import instructor
-    from groq import AsyncGroq as AsyncGroqSDK
     from ragas.llms.base import InstructorLLM, InstructorModelArgs
     from ragas.metrics.collections import Faithfulness
 
-    settings = get_settings()
-    groq_client = instructor.from_groq(
-        AsyncGroqSDK(api_key=settings.groq_api_key.get_secret_value()),
+    client_manager = GroqClientManager()
+    groq_client = instructor.AsyncInstructor(
+        client=None,
+        create=instructor.patch(
+            create=client_manager.acreate_chat_completion,
+            mode=instructor.Mode.JSON,
+        ),
+        provider=instructor.Provider.GROQ,
         mode=instructor.Mode.JSON,
     )
     judge_llm = InstructorLLM(
@@ -196,9 +199,7 @@ async def score_faithfulness_with_direct_judge(
     prepared_response: PreparedFaithfulnessResponse | None = None,
 ) -> FallbackFaithfulnessJudgment:
     """Fallback faithfulness judge used when RAGAS structured output fails."""
-    settings = get_settings()
-    client = AsyncGroq(api_key=settings.groq_api_key.get_secret_value())
-    response = await client.chat.completions.create(
+    response = await GroqClientManager().acreate_chat_completion(
         model=judge_model,
         temperature=0.0,
         max_tokens=512,

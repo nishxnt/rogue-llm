@@ -5,11 +5,10 @@ from __future__ import annotations
 from typing import Any, Protocol, cast
 
 from deepeval.models import DeepEvalBaseLLM
-from langchain_groq import ChatGroq
 
-from src.config import get_settings
 from src.evaluation.config import PRIMARY_JUDGE_MODEL
 from src.evaluation.engine import AttackEvaluationInput, MetricResult
+from src.pipeline.groq_client import GroqClientManager
 
 
 class DeepEvalHallucinationScorer(Protocol):
@@ -114,23 +113,27 @@ class GroqDeepEvalLLM(DeepEvalBaseLLM):
 
     def __init__(self, *, model: str) -> None:
         self.model_name = model
+        self._client_manager = GroqClientManager()
         super().__init__(model=model)
 
     def load_model(self, *_args: Any, **_kwargs: Any) -> Any:
-        settings = get_settings()
-        return ChatGroq(
-            model_name=self.model_name,
-            temperature=0.0,
-            api_key=settings.groq_api_key.get_secret_value(),
-        )
+        return self
 
     def generate(self, prompt: str, *_args: object, **_kwargs: object) -> str:
-        response = cast("ChatGroq", self.model).invoke(prompt)
-        return str(response.content)
+        response = self._client_manager.create_chat_completion(
+            model=self.model_name,
+            temperature=0.0,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return str(response.choices[0].message.content or "")
 
     async def a_generate(self, prompt: str, *_args: object, **_kwargs: object) -> str:
-        response = await cast("ChatGroq", self.model).ainvoke(prompt)
-        return str(response.content)
+        response = await self._client_manager.acreate_chat_completion(
+            model=self.model_name,
+            temperature=0.0,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return str(response.choices[0].message.content or "")
 
     def get_model_name(self) -> str:
         return f"groq:{self.model_name}"

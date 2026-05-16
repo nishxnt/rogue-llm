@@ -8,6 +8,7 @@ from typer.testing import CliRunner
 from src.evaluation import cli, cross_validator
 from src.evaluation.cli import app
 from src.evaluation.engine import AttackEvaluationInput, MetricResult
+from src.pipeline.groq_client import GroqPreflightBudget
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -60,6 +61,18 @@ def test_sample_cli_scores_stratified_subset_without_live_judges(
     _write_results(results)
     monkeypatch.setattr(cli, "build_metric_suite", lambda **_: [FakeMetric()])
 
+    async def fake_probe(**_: object) -> list[GroqPreflightBudget]:
+        return [
+            GroqPreflightBudget("primary", 25_000, "5m"),
+            GroqPreflightBudget("secondary", 25_000, "5m"),
+        ]
+
+    monkeypatch.setattr(
+        cli,
+        "probe_groq_token_budgets",
+        fake_probe,
+    )
+
     result = CliRunner().invoke(
         app,
         [
@@ -81,6 +94,48 @@ def test_sample_cli_scores_stratified_subset_without_live_judges(
     assert "System Risk Score:" in result.output
     assert list(output_root.glob("run_*/scores.jsonl"))
     assert list(output_root.glob("run_*/risk_scores.json"))
+
+
+def test_resume_cli_aborts_when_combined_preflight_budget_is_too_low(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    results = tmp_path / "results.jsonl"
+    cache = tmp_path / "cache.sqlite"
+    output_root = tmp_path / "out"
+    _write_results(results)
+    monkeypatch.setattr(cli, "build_metric_suite", lambda **_: [FakeMetric()])
+
+    async def fake_probe(**_: object) -> list[GroqPreflightBudget]:
+        return [
+            GroqPreflightBudget("primary", 612, "5m"),
+            GroqPreflightBudget("secondary", 0, "9m"),
+        ]
+
+    monkeypatch.setattr(
+        cli,
+        "probe_groq_token_budgets",
+        fake_probe,
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "resume",
+            "--results",
+            str(results),
+            "--cache",
+            str(cache),
+            "--output-root",
+            str(output_root),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Insufficient TPD budget across configured keys." in result.output
+    assert "Primary: 612 tokens." in result.output
+    assert "Secondary: 0 tokens." in result.output
+    assert not list(output_root.glob("run_*/scores.jsonl"))
 
 
 def test_cross_validate_cli_prints_metric_summary(
