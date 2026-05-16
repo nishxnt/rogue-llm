@@ -118,6 +118,35 @@ async def test_dual_key_async_falls_back_to_secondary_on_primary_429() -> None:
 
 
 @pytest.mark.asyncio
+async def test_three_key_async_falls_back_to_tertiary_after_two_429s() -> None:
+    primary_client = FakeAsyncClient([_rate_limit_error()])
+    secondary_client = FakeAsyncClient([_rate_limit_error()])
+    tertiary_client = FakeAsyncClient([_response("tertiary-ok")])
+    manager = GroqClientManager(
+        credentials=[
+            GroqCredential("primary", "pk1"),
+            GroqCredential("secondary", "pk2"),
+            GroqCredential("tertiary", "pk3"),
+        ],
+        async_client_factory=lambda *, api_key: {
+            "pk1": primary_client,
+            "pk2": secondary_client,
+            "pk3": tertiary_client,
+        }[api_key],
+    )
+
+    response = await manager.acreate_chat_completion(
+        model="openai/gpt-oss-120b",
+        messages=[{"role": "user", "content": "ping"}],
+    )
+
+    assert response.choices[0].message.content == "tertiary-ok"
+    assert len(primary_client.chat.completions.calls) == 1
+    assert len(secondary_client.chat.completions.calls) == 1
+    assert len(tertiary_client.chat.completions.calls) == 1
+
+
+@pytest.mark.asyncio
 async def test_dual_key_async_raises_original_primary_429_if_both_keys_exhausted() -> None:
     primary_error = _rate_limit_error()
     secondary_error = _rate_limit_error()
@@ -129,6 +158,33 @@ async def test_dual_key_async_raises_original_primary_429_if_both_keys_exhausted
         async_client_factory=lambda *, api_key: {
             "pk1": FakeAsyncClient([primary_error]),
             "pk2": FakeAsyncClient([secondary_error]),
+        }[api_key],
+    )
+
+    with pytest.raises(RateLimitError) as exc_info:
+        await manager.acreate_chat_completion(
+            model="openai/gpt-oss-120b",
+            messages=[{"role": "user", "content": "ping"}],
+        )
+
+    assert exc_info.value is primary_error
+
+
+@pytest.mark.asyncio
+async def test_three_key_async_raises_original_primary_429_if_all_keys_exhausted() -> None:
+    primary_error = _rate_limit_error()
+    secondary_error = _rate_limit_error()
+    tertiary_error = _rate_limit_error()
+    manager = GroqClientManager(
+        credentials=[
+            GroqCredential("primary", "pk1"),
+            GroqCredential("secondary", "pk2"),
+            GroqCredential("tertiary", "pk3"),
+        ],
+        async_client_factory=lambda *, api_key: {
+            "pk1": FakeAsyncClient([primary_error]),
+            "pk2": FakeAsyncClient([secondary_error]),
+            "pk3": FakeAsyncClient([tertiary_error]),
         }[api_key],
     )
 

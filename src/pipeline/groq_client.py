@@ -48,21 +48,25 @@ class AsyncGroqFactory(Protocol):
 
 
 def configured_groq_credentials(settings: Settings | None = None) -> list[GroqCredential]:
-    """Return configured Groq API keys in primary-then-secondary order."""
+    """Return configured Groq API keys in stable priority order."""
     active_settings = settings or get_settings()
-    credentials = [
-        GroqCredential("primary", active_settings.groq_api_key.get_secret_value()),
+    candidates = [
+        ("primary", active_settings.groq_api_key),
+        ("secondary", active_settings.groq_api_key_2),
+        ("tertiary", active_settings.groq_api_key_3),
     ]
-    secondary = active_settings.groq_api_key_2
-    if secondary is not None:
-        secondary_value = secondary.get_secret_value().strip()
-        if secondary_value:
-            credentials.append(GroqCredential("secondary", secondary_value))
+    credentials: list[GroqCredential] = []
+    for name, secret in candidates:
+        if secret is None:
+            continue
+        value = secret.get_secret_value().strip()
+        if value:
+            credentials.append(GroqCredential(name, value))
     return credentials
 
 
 class GroqClientManager:
-    """Groq chat-completion helper with transparent secondary-key fallback."""
+    """Groq chat-completion helper with transparent fallback across configured keys."""
 
     def __init__(
         self,
@@ -78,7 +82,7 @@ class GroqClientManager:
         self._async_clients: dict[str, Any] = {}
 
     def create_chat_completion(self, **kwargs: Any) -> Any:
-        """Create one sync chat completion, retrying on the secondary key after 429."""
+        """Create one sync chat completion, retrying on the next configured key after 429."""
         original_error: RateLimitError | None = None
         for index, credential in enumerate(self._credentials):
             try:
@@ -105,7 +109,7 @@ class GroqClientManager:
         raise original_error
 
     async def acreate_chat_completion(self, **kwargs: Any) -> Any:
-        """Create one async chat completion, retrying on the secondary key after 429."""
+        """Create one async chat completion, retrying on the next configured key after 429."""
         original_error: RateLimitError | None = None
         for index, credential in enumerate(self._credentials):
             try:
