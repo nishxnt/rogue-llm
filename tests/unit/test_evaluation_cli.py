@@ -63,13 +63,13 @@ def test_sample_cli_scores_stratified_subset_without_live_judges(
 
     async def fake_probe(**_: object) -> list[GroqPreflightBudget]:
         return [
-            GroqPreflightBudget("primary", 25_000, "5m"),
-            GroqPreflightBudget("secondary", 25_000, "5m"),
+            GroqPreflightBudget("primary", 999, "1h", 25_000, "5m", {}),
+            GroqPreflightBudget("secondary", 999, "1h", 25_000, "5m", {}),
         ]
 
     monkeypatch.setattr(
         cli,
-        "probe_groq_token_budgets",
+        "probe_groq_rate_limits",
         fake_probe,
     )
 
@@ -108,13 +108,13 @@ def test_resume_cli_aborts_when_combined_preflight_budget_is_too_low(
 
     async def fake_probe(**_: object) -> list[GroqPreflightBudget]:
         return [
-            GroqPreflightBudget("primary", 612, "5m"),
-            GroqPreflightBudget("secondary", 0, "9m"),
+            GroqPreflightBudget("primary", 612, "1h", 612, "5m", {}),
+            GroqPreflightBudget("secondary", 0, "2h", 0, "9m", {}),
         ]
 
     monkeypatch.setattr(
         cli,
-        "probe_groq_token_budgets",
+        "probe_groq_rate_limits",
         fake_probe,
     )
 
@@ -132,9 +132,14 @@ def test_resume_cli_aborts_when_combined_preflight_budget_is_too_low(
     )
 
     assert result.exit_code == 1
-    assert "Insufficient TPD budget across configured keys." in result.output
-    assert "Primary: 612 tokens." in result.output
-    assert "Secondary: 0 tokens." in result.output
+    assert (
+        "Preflight summary: combined_rpd_remaining=612 combined_tpm_remaining=612" in result.output
+    )
+    assert "tpd_remaining=not queryable (will manifest as 429 mid-run)" in result.output
+    assert "Insufficient preflight headroom across configured keys." in result.output
+    assert "Combined RPD: 612." in result.output
+    assert "Primary TPM: 612 tokens." in result.output
+    assert "Secondary TPM: 0 tokens." in result.output
     assert not list(output_root.glob("run_*/scores.jsonl"))
 
 

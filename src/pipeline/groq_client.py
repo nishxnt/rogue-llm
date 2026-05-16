@@ -1,4 +1,4 @@
-"""Shared Groq client helpers for key rotation and token-budget probes."""
+"""Shared Groq client helpers for key rotation and rate-limit probes."""
 
 from __future__ import annotations
 
@@ -13,7 +13,8 @@ from src.config import Settings, get_settings
 
 log = structlog.get_logger()
 
-PRE_FLIGHT_MIN_COMBINED_TOKENS = 10_000
+PRE_FLIGHT_MIN_COMBINED_RPD = 50
+PRE_FLIGHT_MIN_COMBINED_TPM = 8_000
 
 
 @dataclass(frozen=True)
@@ -26,11 +27,14 @@ class GroqCredential:
 
 @dataclass(frozen=True)
 class GroqPreflightBudget:
-    """Token-budget snapshot for one configured Groq key."""
+    """Rate-limit snapshot for one configured Groq key."""
 
     key_name: str
-    remaining_tokens: int | None
+    remaining_requests_per_day: int | None
+    reset_requests: str | None
+    remaining_tokens_per_minute: int | None
     reset_tokens: str | None
+    raw_headers: dict[str, str]
 
 
 class SyncGroqFactory(Protocol):
@@ -96,7 +100,7 @@ class GroqClientManager:
                 model=str(kwargs.get("model", "unknown")),
             )
             return response
-        if original_error is None:  # pragma: no cover - credentials always include a primary key
+        if original_error is None:  # pragma: no cover
             raise RuntimeError("No Groq credentials configured")
         raise original_error
 
@@ -123,12 +127,12 @@ class GroqClientManager:
                 model=str(kwargs.get("model", "unknown")),
             )
             return response
-        if original_error is None:  # pragma: no cover - credentials always include a primary key
+        if original_error is None:  # pragma: no cover
             raise RuntimeError("No Groq credentials configured")
         raise original_error
 
-    async def probe_token_budgets(self, *, model: str) -> list[GroqPreflightBudget]:
-        """Make one tiny call per key and return token-budget headers."""
+    async def probe_rate_limits(self, *, model: str) -> list[GroqPreflightBudget]:
+        """Make one tiny call per key and return the exposed Groq rate-limit headers."""
         budgets: list[GroqPreflightBudget] = []
         for credential in self._credentials:
             client = self._async_client(credential)
@@ -165,17 +169,29 @@ class GroqClientManager:
         return self._async_clients[credential.name]
 
 
-def combined_remaining_tokens(budgets: list[GroqPreflightBudget]) -> int:
-    """Return the summed remaining-token budget across all configured keys."""
-    return sum(budget.remaining_tokens or 0 for budget in budgets)
+def combined_remaining_requests_per_day(budgets: list[GroqPreflightBudget]) -> int:
+    """Return the summed remaining daily-request budget across configured keys."""
+    return sum(budget.remaining_requests_per_day or 0 for budget in budgets)
+
+
+def combined_remaining_tokens_per_minute(budgets: list[GroqPreflightBudget]) -> int:
+    """Return the summed remaining TPM budget across configured keys."""
+    return sum(budget.remaining_tokens_per_minute or 0 for budget in budgets)
 
 
 def _budget_from_headers(key_name: str, headers: Headers) -> GroqPreflightBudget:
-    remaining = _parse_int(headers.get("x-ratelimit-remaining-tokens"))
+    raw_headers = {
+        key.lower(): value
+        for key, value in headers.items()
+        if key.lower().startswith("x-ratelimit-")
+    }
     return GroqPreflightBudget(
         key_name=key_name,
-        remaining_tokens=remaining,
-        reset_tokens=headers.get("x-ratelimit-reset-tokens"),
+        remaining_requests_per_day=_parse_int(raw_headers.get("x-ratelimit-remaining-requests")),
+        reset_requests=raw_headers.get("x-ratelimit-reset-requests"),
+        remaining_tokens_per_minute=_parse_int(raw_headers.get("x-ratelimit-remaining-tokens")),
+        reset_tokens=raw_headers.get("x-ratelimit-reset-tokens"),
+        raw_headers=raw_headers,
     )
 
 

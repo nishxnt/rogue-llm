@@ -9,7 +9,8 @@ from groq import RateLimitError
 from src.pipeline.groq_client import (
     GroqClientManager,
     GroqCredential,
-    combined_remaining_tokens,
+    combined_remaining_requests_per_day,
+    combined_remaining_tokens_per_minute,
 )
 
 
@@ -141,7 +142,7 @@ async def test_dual_key_async_raises_original_primary_429_if_both_keys_exhausted
 
 
 @pytest.mark.asyncio
-async def test_probe_token_budgets_reads_headers_per_key() -> None:
+async def test_probe_rate_limits_reads_headers_per_key() -> None:
     manager = GroqClientManager(
         credentials=[
             GroqCredential("primary", "pk1"),
@@ -153,6 +154,8 @@ async def test_probe_token_budgets_reads_headers_per_key() -> None:
                 raw_actions=[
                     FakeRawResponse(
                         {
+                            "x-ratelimit-remaining-requests": "945",
+                            "x-ratelimit-reset-requests": "1h",
                             "x-ratelimit-remaining-tokens": "12000",
                             "x-ratelimit-reset-tokens": "6m",
                         }
@@ -164,6 +167,8 @@ async def test_probe_token_budgets_reads_headers_per_key() -> None:
                 raw_actions=[
                     _rate_limit_error(
                         {
+                            "x-ratelimit-remaining-requests": "944",
+                            "x-ratelimit-reset-requests": "2h",
                             "x-ratelimit-remaining-tokens": "8000",
                             "x-ratelimit-reset-tokens": "11m",
                         }
@@ -173,12 +178,20 @@ async def test_probe_token_budgets_reads_headers_per_key() -> None:
         }[api_key],
     )
 
-    budgets = await manager.probe_token_budgets(model="openai/gpt-oss-120b")
+    budgets = await manager.probe_rate_limits(model="openai/gpt-oss-120b")
 
     assert [
-        (budget.key_name, budget.remaining_tokens, budget.reset_tokens) for budget in budgets
+        (
+            budget.key_name,
+            budget.remaining_requests_per_day,
+            budget.reset_requests,
+            budget.remaining_tokens_per_minute,
+            budget.reset_tokens,
+        )
+        for budget in budgets
     ] == [
-        ("primary", 12000, "6m"),
-        ("secondary", 8000, "11m"),
+        ("primary", 945, "1h", 12000, "6m"),
+        ("secondary", 944, "2h", 8000, "11m"),
     ]
-    assert combined_remaining_tokens(budgets) == 20000
+    assert combined_remaining_requests_per_day(budgets) == 1889
+    assert combined_remaining_tokens_per_minute(budgets) == 20000

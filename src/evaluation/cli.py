@@ -30,10 +30,12 @@ from src.evaluation.engine import (
 from src.evaluation.metric_suite import LLM_GRADED_METRIC_NAMES, build_metric_suite
 from src.evaluation.scorer import score_run
 from src.pipeline.groq_client import (
-    PRE_FLIGHT_MIN_COMBINED_TOKENS,
+    PRE_FLIGHT_MIN_COMBINED_RPD,
+    PRE_FLIGHT_MIN_COMBINED_TPM,
     GroqClientManager,
     GroqPreflightBudget,
-    combined_remaining_tokens,
+    combined_remaining_requests_per_day,
+    combined_remaining_tokens_per_minute,
 )
 
 app = typer.Typer(help="Phase 4 evaluation scoring.")
@@ -237,20 +239,31 @@ def _run_score_command(
     skip_preflight: bool,
 ) -> None:
     if not skip_preflight:
-        preflight = asyncio.run(probe_groq_token_budgets(model=judge_model))
+        preflight = asyncio.run(probe_groq_rate_limits(model=judge_model))
+        combined_rpd = combined_remaining_requests_per_day(preflight)
+        combined_tpm = combined_remaining_tokens_per_minute(preflight)
         for budget in preflight:
             typer.echo(
                 f"Preflight {budget.key_name}: "
-                f"remaining_tokens={budget.remaining_tokens if budget.remaining_tokens is not None else 'unknown'} "
+                f"remaining_requests_per_day={budget.remaining_requests_per_day if budget.remaining_requests_per_day is not None else 'unknown'} "
+                f"reset_requests={budget.reset_requests or 'unknown'} "
+                f"remaining_tokens_per_minute={budget.remaining_tokens_per_minute if budget.remaining_tokens_per_minute is not None else 'unknown'} "
                 f"reset_tokens={budget.reset_tokens or 'unknown'}"
             )
-        combined_tokens = combined_remaining_tokens(preflight)
-        if combined_tokens < PRE_FLIGHT_MIN_COMBINED_TOKENS:
+        typer.echo(
+            "Preflight summary: "
+            f"combined_rpd_remaining={combined_rpd} "
+            f"combined_tpm_remaining={combined_tpm} "
+            "tpd_remaining=not queryable (will manifest as 429 mid-run)"
+        )
+        if combined_rpd < PRE_FLIGHT_MIN_COMBINED_RPD or combined_tpm < PRE_FLIGHT_MIN_COMBINED_TPM:
             retry_after = _format_retry_after(preflight)
             typer.echo(
-                "Insufficient TPD budget across configured keys. "
-                f"Primary: {_remaining_label(preflight, 'primary')} tokens. "
-                f"Secondary: {_remaining_label(preflight, 'secondary')} tokens. "
+                "Insufficient preflight headroom across configured keys. "
+                f"Combined RPD: {combined_rpd}. "
+                f"Primary TPM: {_remaining_tpm_label(preflight, 'primary')} tokens. "
+                f"Secondary TPM: {_remaining_tpm_label(preflight, 'secondary')} tokens. "
+                f"Combined TPM: {combined_tpm}. "
                 f"Retry after: {retry_after}."
             )
             raise typer.Exit(code=1)
@@ -272,9 +285,9 @@ def _run_score_command(
     typer.echo(f"System Risk Score: {system_risk:.4f}")
 
 
-async def probe_groq_token_budgets(model: str) -> list[GroqPreflightBudget]:
-    """Probe the configured Groq keys and return token-budget headers."""
-    return await GroqClientManager().probe_token_budgets(model=model)
+async def probe_groq_rate_limits(model: str) -> list[GroqPreflightBudget]:
+    """Probe the configured Groq keys and return the exposed rate-limit headers."""
+    return await GroqClientManager().probe_rate_limits(model=model)
 
 
 async def score_results(
@@ -365,11 +378,13 @@ def _is_transient_metric_error(exc: Exception) -> bool:
     return any(marker in text for marker in transient_markers)
 
 
-def _remaining_label(budgets: list[GroqPreflightBudget], key_name: str) -> str:
+def _remaining_tpm_label(budgets: list[GroqPreflightBudget], key_name: str) -> str:
     for budget in budgets:
         if budget.key_name == key_name:
             return (
-                str(budget.remaining_tokens) if budget.remaining_tokens is not None else "unknown"
+                str(budget.remaining_tokens_per_minute)
+                if budget.remaining_tokens_per_minute is not None
+                else "unknown"
             )
     return "not configured"
 
