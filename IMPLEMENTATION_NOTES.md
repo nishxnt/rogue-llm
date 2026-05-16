@@ -532,3 +532,56 @@ Gate 3 investigation protocol:
 - If chunking is implicated, defer implementation changes until after Gate 3 and record a Phase 5 or
   v1.1 remediation option. Do not alter the Phase 1 vector index during this Gate 3 evaluation run,
   because doing so would invalidate cached Phase 3 responses.
+
+#### OWASP Web Faithfulness Investigation
+
+Observed on May 16, 2026 against `ragas-collections-with-groq-fallback-v4` cache state
+`166/175`:
+
+| Source bucket | Mean | Median | Scored | Low-score share `<0.5` |
+|---------------|------|--------|--------|-------------------------|
+| `nvd` | `0.2698` | `0.1429` | 63 | `76.2%` |
+| `owasp_llm` | `0.2347` | `0.1333` | 29 | `75.9%` |
+| `owasp_web` | n/a | n/a | 0 | n/a |
+| `mixed` | `0.2520` | `0.0000` | 50 | `74.0%` |
+| `none` | n/a | n/a | 0 | n/a |
+
+Interpretation:
+
+- The current Gate 3 cache does not contain any scored rows whose retrieval set is exclusively
+  OWASP Web. OWASP Web chunks appear only in mixed retrieval sets for this run, so the original
+  Phase 1 anomaly no longer shows up as a clean `owasp_web`-only bucket comparison.
+- The useful comparison is whether a scored row contains any OWASP Web chunk at all:
+
+| Slice | Mean | Median | Scored | Low-score share `<0.5` | Avg chunk count | Avg chunk length |
+|-------|------|--------|--------|-------------------------|-----------------|------------------|
+| `contains_owasp_web` | `0.1561` | `0.0000` | 26 | `84.6%` | 4.0 | 572.6 chars |
+| `nvd_only` | `0.2783` | `0.1504` | 64 | `75.0%` | 4.0 | 378.5 chars |
+| `owasp_llm_only` | `0.2602` | `0.1619` | 30 | `73.3%` | 4.0 | 746.6 chars |
+
+Chunk-shape findings:
+
+- Rows containing OWASP Web chunks are materially lower than both `nvd_only` and `owasp_llm_only`.
+- The difference is not chunk count; all three slices average 4 retrieved chunks.
+- The difference is text shape. `contains_owasp_web` chunks average `1.65` bullet markers per
+  chunk versus `0.03` for `nvd_only` and `0.34` for `owasp_llm_only`.
+- Low-scoring examples repeatedly include OWASP Web remediation lists or overview sections mixed
+  with CVE snippets, such as `A06_2021-Vulnerable_and_Outdated_Components`,
+  `A03_2021-Injection`, `A04_2021-Insecure_Design`, and
+  `A08_2021-Software_and_Data_Integrity_Failures`.
+
+Assessment:
+
+- `RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)` is preserving long markdown
+  list blocks from OWASP Web pages. Those chunks often contain multiple mitigation bullets,
+  reference links, or section headers in one retrieval unit.
+- CVE/NVD chunks are shorter and more claim-shaped, which aligns better with faithfulness judging.
+- The likely failure mode is not retrieval count but heterogeneous OWASP Web chunk content: the
+  target synthesizes plausible advice adjacent to the retrieved list material, and faithfulness
+  drops because the response goes beyond any single bullet-heavy chunk.
+
+Decision:
+
+- Do not rebuild or retune the vector index during Gate 3.
+- Carry this forward as a Phase 5 follow-up: evaluate markdown-aware splitting or structure-aware
+  OWASP page normalization so list-heavy sections do not get packed into broad mixed-purpose chunks.
