@@ -54,6 +54,7 @@ def configured_groq_credentials(settings: Settings | None = None) -> list[GroqCr
         ("primary", active_settings.groq_api_key),
         ("secondary", active_settings.groq_api_key_2),
         ("tertiary", active_settings.groq_api_key_3),
+        ("quaternary", active_settings.groq_api_key_4),
     ]
     credentials: list[GroqCredential] = []
     for name, secret in candidates:
