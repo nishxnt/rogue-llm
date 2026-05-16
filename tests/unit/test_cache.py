@@ -29,6 +29,7 @@ def test_cache_creates_schema_and_version_table(tmp_path: Path) -> None:
 
     assert version == SCHEMA_VERSION
     assert "attack_results" in tables
+    assert "metric_scores" in tables
     assert "cache_schema_version" in tables
 
 
@@ -100,6 +101,33 @@ def test_prompt_hash_change_invalidates_cache(tmp_path: Path) -> None:
         assert cache.get(**base_key, prompt_hash=hash_text("changed prompt")) is None
     finally:
         cache.close()
+
+
+def test_metric_score_cache_hit_and_input_hash_invalidation(tmp_path: Path) -> None:
+    cache = ResultCache(tmp_path / "results_cache.sqlite")
+    key = {
+        "attack_id": "LLM09-0001",
+        "metric_name": "hallucination",
+        "judge_model": "openai/gpt-oss-120b",
+        "judge_version": "v1",
+    }
+    score = {
+        "attack_id": "LLM09-0001",
+        "metric_name": "hallucination",
+        "score": 0.75,
+    }
+
+    try:
+        assert cache.get_metric_score(**key, input_hash="hash-a") is None
+
+        cache.set_metric_score(**key, input_hash="hash-a", score=score)
+        cached = cache.get_metric_score(**key, input_hash="hash-a")
+        changed = cache.get_metric_score(**key, input_hash="hash-b")
+    finally:
+        cache.close()
+
+    assert cached == score
+    assert changed is None
 
 
 def test_unknown_schema_version_fails_closed(tmp_path: Path) -> None:
