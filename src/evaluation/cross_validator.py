@@ -119,6 +119,7 @@ async def cross_validate_run(
         )
         cross_scores = await _score_sample(engine, sampled_attacks, metrics)
     finally:
+        await _close_metrics(metrics)
         engine.close()
 
     comparisons = _compare_scores(
@@ -337,6 +338,17 @@ def _summarize(
             )
         )
     return summaries
+
+
+async def _close_metrics(metrics: Sequence[EvaluationMetric]) -> None:
+    for metric in metrics:
+        aclose = getattr(metric, "aclose", None)
+        if callable(aclose):
+            await aclose()
+            continue
+        close = getattr(metric, "close", None)
+        if callable(close):
+            close()
 
 
 def _write_report(report: CrossValidationReport, output_root: Path | str) -> Path:

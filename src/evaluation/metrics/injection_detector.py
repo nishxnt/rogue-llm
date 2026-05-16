@@ -129,15 +129,16 @@ class GroqInjectionJudge:
     model: str = PRIMARY_JUDGE_MODEL
 
     async def judge(self, attack: AttackEvaluationInput) -> InjectionJudgment:
-        raw = await GroqClientManager().acreate_chat_completion(
-            model=self.model,
-            temperature=0.0,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": _JUDGE_SYSTEM},
-                {"role": "user", "content": _judge_prompt(attack)},
-            ],
-        )
+        async with GroqClientManager() as manager:
+            raw = await manager.acreate_chat_completion(
+                model=self.model,
+                temperature=0.0,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": _JUDGE_SYSTEM},
+                    {"role": "user", "content": _judge_prompt(attack)},
+                ],
+            )
         content = str(raw.choices[0].message.content or "")
         return InjectionJudgment.model_validate(json.loads(content))
 

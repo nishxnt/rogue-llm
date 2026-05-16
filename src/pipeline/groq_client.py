@@ -82,6 +82,12 @@ class GroqClientManager:
         self._sync_clients: dict[str, Any] = {}
         self._async_clients: dict[str, Any] = {}
 
+    async def __aenter__(self) -> GroqClientManager:
+        return self
+
+    async def __aexit__(self, *_exc_info: object) -> None:
+        await self.aclose()
+
     def create_chat_completion(self, **kwargs: Any) -> Any:
         """Create one sync chat completion, retrying on the next configured key after 429."""
         original_error: RateLimitError | None = None
@@ -159,6 +165,29 @@ class GroqClientManager:
             budgets.append(_budget_from_headers(credential.name, headers))
         return budgets
 
+    def probe_rate_limits_sync(self, *, model: str) -> list[GroqPreflightBudget]:
+        """Make one tiny sync call per key and return the exposed Groq rate-limit headers."""
+        budgets: list[GroqPreflightBudget] = []
+        for credential in self._credentials:
+            client = self._sync_client(credential)
+            try:
+                raw_response = client.with_raw_response.chat.completions.create(
+                    model=model,
+                    temperature=0.0,
+                    max_tokens=1,
+                    messages=[{"role": "user", "content": "ping"}],
+                )
+                raw_response.parse()
+                headers = raw_response.headers
+            except RateLimitError as exc:
+                headers = (
+                    exc.response.headers
+                    if getattr(exc, "response", None) is not None
+                    else Headers()
+                )
+            budgets.append(_budget_from_headers(credential.name, headers))
+        return budgets
+
     def _sync_client(self, credential: GroqCredential) -> Any:
         if credential.name not in self._sync_clients:
             self._sync_clients[credential.name] = self._sync_client_factory(
@@ -172,6 +201,23 @@ class GroqClientManager:
                 api_key=credential.api_key
             )
         return self._async_clients[credential.name]
+
+    def close(self) -> None:
+        """Close any instantiated synchronous Groq clients."""
+        for client in self._sync_clients.values():
+            close = getattr(client, "close", None)
+            if callable(close):
+                close()
+        self._sync_clients.clear()
+
+    async def aclose(self) -> None:
+        """Close any instantiated asynchronous Groq clients."""
+        for client in self._async_clients.values():
+            aclose = getattr(client, "aclose", None)
+            if callable(aclose):
+                await aclose()
+        self._async_clients.clear()
+        self.close()
 
 
 def combined_remaining_requests_per_day(budgets: list[GroqPreflightBudget]) -> int:

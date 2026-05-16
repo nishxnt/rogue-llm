@@ -61,7 +61,7 @@ def test_sample_cli_scores_stratified_subset_without_live_judges(
     _write_results(results)
     monkeypatch.setattr(cli, "build_metric_suite", lambda **_: [FakeMetric()])
 
-    async def fake_probe(**_: object) -> list[GroqPreflightBudget]:
+    def fake_probe(**_: object) -> list[GroqPreflightBudget]:
         return [
             GroqPreflightBudget("primary", 999, "1h", 25_000, "5m", {}),
             GroqPreflightBudget("secondary", 999, "1h", 25_000, "5m", {}),
@@ -106,7 +106,7 @@ def test_resume_cli_aborts_when_combined_preflight_budget_is_too_low(
     _write_results(results)
     monkeypatch.setattr(cli, "build_metric_suite", lambda **_: [FakeMetric()])
 
-    async def fake_probe(**_: object) -> list[GroqPreflightBudget]:
+    def fake_probe(**_: object) -> list[GroqPreflightBudget]:
         return [
             GroqPreflightBudget("primary", 612, "1h", 612, "5m", {}),
             GroqPreflightBudget("secondary", 0, "2h", 0, "9m", {}),

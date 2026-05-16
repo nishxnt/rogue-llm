@@ -78,6 +78,15 @@ class HallucinationMetric:
             self._scorer = build_deepeval_hallucination_scorer(self.judge_model)
         return self._scorer
 
+    async def aclose(self) -> None:
+        scorer = self._scorer
+        if scorer is None:
+            return
+        model = getattr(scorer, "model", None)
+        aclose = getattr(model, "aclose", None)
+        if callable(aclose):
+            await aclose()
+
 
 def build_hallucination_test_case(attack: AttackEvaluationInput) -> Any:
     """Build the DeepEval LLMTestCase for contextual or reference-free scoring."""
@@ -137,6 +146,9 @@ class GroqDeepEvalLLM(DeepEvalBaseLLM):
 
     def get_model_name(self) -> str:
         return f"groq:{self.model_name}"
+
+    async def aclose(self) -> None:
+        await self._client_manager.aclose()
 
 
 def _safe_jsonable(value: Any) -> object:

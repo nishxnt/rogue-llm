@@ -239,7 +239,7 @@ def _run_score_command(
     skip_preflight: bool,
 ) -> None:
     if not skip_preflight:
-        preflight = asyncio.run(probe_groq_rate_limits(model=judge_model))
+        preflight = probe_groq_rate_limits(model=judge_model)
         combined_rpd = combined_remaining_requests_per_day(preflight)
         combined_tpm = combined_remaining_tokens_per_minute(preflight)
         for budget in preflight:
@@ -285,9 +285,13 @@ def _run_score_command(
     typer.echo(f"System Risk Score: {system_risk:.4f}")
 
 
-async def probe_groq_rate_limits(model: str) -> list[GroqPreflightBudget]:
+def probe_groq_rate_limits(model: str) -> list[GroqPreflightBudget]:
     """Probe the configured Groq keys and return the exposed rate-limit headers."""
-    return await GroqClientManager().probe_rate_limits(model=model)
+    manager = GroqClientManager()
+    try:
+        return manager.probe_rate_limits_sync(model=model)
+    finally:
+        manager.close()
 
 
 async def score_results(
@@ -319,12 +323,25 @@ async def score_results(
         scores = await _score_attacks(engine, attacks)
         scores_path = engine.write_scores(scores)
     finally:
+        await close_metrics(metrics)
         engine.close()
 
     risk = score_run(attacks, scores)
     risk_path = scores_path.parent / "risk_scores.json"
     risk_path.write_text(risk.model_dump_json(indent=2), encoding="utf-8")
     return scores_path, risk_path, len(attacks), risk.risk_score
+
+
+async def close_metrics(metrics: list[EvaluationMetric]) -> None:
+    """Close async metric resources that outlive a single score call."""
+    for metric in metrics:
+        aclose = getattr(metric, "aclose", None)
+        if callable(aclose):
+            await aclose()
+            continue
+        close = getattr(metric, "close", None)
+        if callable(close):
+            close()
 
 
 async def _score_attacks(

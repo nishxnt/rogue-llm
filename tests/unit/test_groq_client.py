@@ -64,6 +64,10 @@ class FakeSyncClient:
     def __init__(self, actions: list[object]) -> None:
         completions = FakeSyncCompletions(actions)
         self.chat = SimpleNamespace(completions=completions)
+        self.closed = False
+
+    def close(self) -> None:
+        self.closed = True
 
 
 class FakeAsyncClient:
@@ -74,6 +78,10 @@ class FakeAsyncClient:
         self.with_raw_response = SimpleNamespace(
             chat=SimpleNamespace(completions=raw_completions),
         )
+        self.closed = False
+
+    async def aclose(self) -> None:
+        self.closed = True
 
 
 def test_single_key_sync_behaves_as_before() -> None:
@@ -284,3 +292,20 @@ async def test_probe_rate_limits_reads_headers_per_key() -> None:
     ]
     assert combined_remaining_requests_per_day(budgets) == 1889
     assert combined_remaining_tokens_per_minute(budgets) == 20000
+
+
+@pytest.mark.asyncio
+async def test_manager_aclose_closes_instantiated_async_clients() -> None:
+    primary_client = FakeAsyncClient([_response("ok")])
+    manager = GroqClientManager(
+        credentials=[GroqCredential("primary", "pk1")],
+        async_client_factory=lambda *, api_key: primary_client,
+    )
+
+    await manager.acreate_chat_completion(
+        model="openai/gpt-oss-120b",
+        messages=[{"role": "user", "content": "ping"}],
+    )
+    await manager.aclose()
+
+    assert primary_client.closed is True
