@@ -139,6 +139,19 @@ class ResidualSummary(BaseModel):
     bypass_counts: dict[str, int] = Field(default_factory=dict)
     attack_ids_by_bypass: dict[str, list[str]] = Field(default_factory=dict)
     remediation_notes: dict[str, str] = Field(default_factory=dict)
+    residual_attacks: list[ResidualAttackSummary] = Field(default_factory=list)
+
+
+class ResidualAttackSummary(BaseModel):
+    """One residual guarded attack for report rendering."""
+
+    attack_id: str
+    owasp_category: str
+    bypass_class: str
+    guardrail_decision: str | None = None
+    guarded_vulnerability_score: float
+    unguarded_vulnerability_score: float
+    recommended_remediation: str
 
 
 class L2FailClosedAnalysis(BaseModel):
@@ -214,6 +227,9 @@ class OwaspWebChunkingFinding(BaseModel):
     contains_owasp_web_bullet_markers_per_chunk: float
     nvd_only_bullet_markers_per_chunk: float
     owasp_llm_only_bullet_markers_per_chunk: float
+    contains_owasp_web_mean_faithfulness: float
+    nvd_only_mean_faithfulness: float
+    owasp_llm_only_mean_faithfulness: float
     interpretation: str
     remediation_direction: str
     slices: list[SourceSliceFinding] = Field(default_factory=list)
@@ -227,8 +243,10 @@ class HonestFinding(BaseModel):
         "llm06_excessive_agency_weakness",
         "guarded_faithfulness_coverage_limitation",
     ]
-    headline: str
-    summary: str
+    title: str
+    severity: Literal["high", "medium", "low"]
+    description: str
+    related_attack_ids: list[str] = Field(default_factory=list)
 
 
 class RiskReport(BaseModel):
@@ -312,13 +330,33 @@ def build_risk_report(
     residual_summary = ResidualSummary(
         threshold=residual.threshold,
         residual_count=residual.residual_count,
-        bypass_counts=residual.bypass_counts,
-        attack_ids_by_bypass=residual.attack_ids_by_bypass,
+        bypass_counts={
+            "A": residual.bypass_counts.get("A", 0),
+            "B": residual.bypass_counts.get("B", 0),
+            "C": residual.bypass_counts.get("C", 0),
+        },
+        attack_ids_by_bypass={
+            "A": residual.attack_ids_by_bypass.get("A", []),
+            "B": residual.attack_ids_by_bypass.get("B", []),
+            "C": residual.attack_ids_by_bypass.get("C", []),
+        },
         remediation_notes={
             "A": "Expand prompt normalization and explicit injection marker coverage.",
             "B": "Tighten Layer 2 classifier policy examples, thresholds, and unavailable-model handling.",
             "C": "Review Layer 3 post-generation filtering, especially for LLM08 residual behavior.",
         },
+        residual_attacks=[
+            ResidualAttackSummary(
+                attack_id=attack.attack_id,
+                owasp_category=attack.owasp_category,
+                bypass_class=attack.bypass_class,
+                guardrail_decision=attack.guardrail_decision,
+                guarded_vulnerability_score=attack.guarded_vulnerability_score,
+                unguarded_vulnerability_score=attack.unguarded_vulnerability_score,
+                recommended_remediation=attack.recommended_remediation,
+            )
+            for attack in residual.residual_attacks
+        ],
     )
     l2_fail_closed_count = next(
         (entry.count for entry in layer_attribution.entries if entry.label == "L2 fail-closed"),
@@ -376,18 +414,22 @@ def build_risk_report(
     honest_findings = [
         HonestFinding(
             finding_id="l2_fail_closed_inflation",
-            headline="L2 fail-closed inflates measured guardrail effectiveness.",
-            summary="26.9% of guarded attacks were blocked because the classifier failed closed; those rows score 0.0 and improve the headline reduction while representing infrastructure unreliability.",
+            title="L2 fail-closed inflates measured guardrail effectiveness",
+            severity="high",
+            description="26.9% of guarded attacks were blocked because the classifier failed closed; those rows score 0.0 and improve the headline reduction while representing infrastructure unreliability.",
         ),
         HonestFinding(
             finding_id="llm06_excessive_agency_weakness",
-            headline="LLM06 is the weakest defended category.",
-            summary="LLM06 achieved only 5.5% reduction without infrastructure failures because Layer 2 allowed risky IAM-policy prompts and the base RAG emitted overly permissive wildcard-heavy IAM policies.",
+            title="LLM06 is the weakest defended category",
+            severity="high",
+            description="LLM06 achieved only 5.5% reduction without infrastructure failures because Layer 2 allowed risky IAM-policy prompts and the base RAG emitted overly permissive wildcard-heavy IAM policies.",
+            related_attack_ids=["LLM06-0004", "LLM06-0006"],
         ),
         HonestFinding(
             finding_id="guarded_faithfulness_coverage_limitation",
-            headline="Guarded faithfulness coverage is structurally sparse.",
-            summary="Only 7/175 guarded rows are scorable for faithfulness because refusal responses do not trigger retrieval; the headline risk reduction does not depend on faithfulness.",
+            title="Guarded faithfulness coverage is structurally sparse",
+            severity="medium",
+            description="Only 7/175 guarded rows are scorable for faithfulness because refusal responses do not trigger retrieval; the headline risk reduction does not depend on faithfulness.",
         ),
     ]
     methodology_notes = [
@@ -639,6 +681,9 @@ def _owasp_web_chunking_finding() -> OwaspWebChunkingFinding:
         contains_owasp_web_bullet_markers_per_chunk=1.65,
         nvd_only_bullet_markers_per_chunk=0.03,
         owasp_llm_only_bullet_markers_per_chunk=0.34,
+        contains_owasp_web_mean_faithfulness=0.1561,
+        nvd_only_mean_faithfulness=0.2783,
+        owasp_llm_only_mean_faithfulness=0.2602,
         interpretation="Rows containing OWASP Web chunks are materially less faithful than nvd_only and owasp_llm_only slices, and the strongest observable difference is the density of bullet-heavy remediation text inside retrieved chunks.",
         remediation_direction="Carry forward markdown-aware splitting or structure-aware OWASP page normalization so broad list blocks do not dominate a single retrieval chunk.",
         slices=[
