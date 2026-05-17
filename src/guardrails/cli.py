@@ -52,13 +52,12 @@ SkipPreflightOption = Annotated[
     bool,
     typer.Option("--skip-preflight", help="Skip Groq preflight check before live calls."),
 ]
-JudgeModelOption = Annotated[str, typer.Option("--judge-model")]
+JudgeModelOption = Annotated[str | None, typer.Option("--judge-model")]
 
 _DEFAULT_DATASET_PATH = Path("attacks/v1/dataset.jsonl")
 _DEFAULT_POLICY_PATH = Path("src/guardrails/policy.yaml")
 _DEFAULT_CACHE_PATH = Path("cache/results_cache.sqlite")
 _DEFAULT_OUTPUT_ROOT = Path("results")
-_DEFAULT_JUDGE_MODEL = get_settings().judge_model
 _MIN_COMBINED_RPD = 100
 _MIN_COMBINED_TPM = 4_000
 
@@ -98,12 +97,13 @@ def evaluate(
     cache: CachePathOption = _DEFAULT_CACHE_PATH,
     output_root: OutputRootOption = _DEFAULT_OUTPUT_ROOT,
     concurrency: ConcurrencyOption = 1,
-    judge_model: JudgeModelOption = _DEFAULT_JUDGE_MODEL,
+    judge_model: JudgeModelOption = None,
     skip_preflight: SkipPreflightOption = False,
 ) -> None:
     """Run the Phase 4 evaluation engine against guarded results."""
+    resolved_judge_model = judge_model or get_settings().judge_model
     if not skip_preflight:
-        budgets = probe_groq_rate_limits(model=judge_model)
+        budgets = probe_groq_rate_limits(model=resolved_judge_model)
         _emit_preflight(budgets)
         _abort_if_preflight_low(budgets)
     scores_path, risk_path, attack_count, system_risk = asyncio.run(
@@ -112,7 +112,7 @@ def evaluate(
             cache_path=cache,
             output_root=output_root,
             concurrency=concurrency,
-            judge_model=judge_model,
+            judge_model=resolved_judge_model,
             live_llm_judges=True,
         )
     )
