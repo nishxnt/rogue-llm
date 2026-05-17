@@ -1,23 +1,32 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from src.reporting.html_renderer import render_risk_report_html, render_risk_report_html_from_json
 from src.reporting.report_builder import RiskReport, build_risk_report, write_risk_report
+from tests.unit.reporting_fixture_paths import (
+    CROSS_VALIDATION,
+    GUARDED_DECISIONS,
+    GUARDED_RESULTS,
+    GUARDED_RISK,
+    GUARDED_SCORES,
+    RESIDUAL_ANALYSIS,
+    UNGUARDED_RISK,
+)
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _build_report() -> RiskReport:
     return build_risk_report(
-        unguarded_risk_path=REPO_ROOT / "results/run_20260516_131022/risk_scores.json",
-        guarded_results_path=REPO_ROOT / "results/run_20260516_164921/results.jsonl",
-        guarded_decisions_path=REPO_ROOT / "results/run_20260516_164921/guardrail_decisions.jsonl",
-        guarded_scores_path=REPO_ROOT / "results/run_20260517_115140/scores.jsonl",
-        guarded_risk_path=REPO_ROOT / "results/run_20260517_115140/risk_scores.json",
-        residual_analysis_path=REPO_ROOT / "results/run_20260517_115451/residual_analysis.json",
-        cross_validation_path=REPO_ROOT
-        / "results/cross_validation_20260516_132118/cross_validation.json",
+        unguarded_risk_path=UNGUARDED_RISK,
+        guarded_results_path=GUARDED_RESULTS,
+        guarded_decisions_path=GUARDED_DECISIONS,
+        guarded_scores_path=GUARDED_SCORES,
+        guarded_risk_path=GUARDED_RISK,
+        residual_analysis_path=RESIDUAL_ANALYSIS,
+        cross_validation_path=CROSS_VALIDATION,
         report_tag="v0.5.0-phase5",
     )
 

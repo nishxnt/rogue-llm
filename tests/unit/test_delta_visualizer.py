@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from src.reporting.delta_visualizer import (
     build_bypass_breakdown_bar,
     build_cross_validator_agreement_bar,
@@ -11,20 +9,26 @@ from src.reporting.delta_visualizer import (
     build_risk_heatmap,
 )
 from src.reporting.report_builder import RiskReport, build_risk_report
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
+from tests.unit.reporting_fixture_paths import (
+    CROSS_VALIDATION,
+    GUARDED_DECISIONS,
+    GUARDED_RESULTS,
+    GUARDED_RISK,
+    GUARDED_SCORES,
+    RESIDUAL_ANALYSIS,
+    UNGUARDED_RISK,
+)
 
 
 def _build_report() -> RiskReport:
     return build_risk_report(
-        unguarded_risk_path=REPO_ROOT / "results/run_20260516_131022/risk_scores.json",
-        guarded_results_path=REPO_ROOT / "results/run_20260516_164921/results.jsonl",
-        guarded_decisions_path=REPO_ROOT / "results/run_20260516_164921/guardrail_decisions.jsonl",
-        guarded_scores_path=REPO_ROOT / "results/run_20260517_115140/scores.jsonl",
-        guarded_risk_path=REPO_ROOT / "results/run_20260517_115140/risk_scores.json",
-        residual_analysis_path=REPO_ROOT / "results/run_20260517_115451/residual_analysis.json",
-        cross_validation_path=REPO_ROOT
-        / "results/cross_validation_20260516_132118/cross_validation.json",
+        unguarded_risk_path=UNGUARDED_RISK,
+        guarded_results_path=GUARDED_RESULTS,
+        guarded_decisions_path=GUARDED_DECISIONS,
+        guarded_scores_path=GUARDED_SCORES,
+        guarded_risk_path=GUARDED_RISK,
+        residual_analysis_path=RESIDUAL_ANALYSIS,
+        cross_validation_path=CROSS_VALIDATION,
         report_tag="v0.5.0-phase5",
     )
 
@@ -54,8 +58,8 @@ def test_build_distribution_charts_have_expected_counts() -> None:
         "Allowed through",
         "LLM08 path",
     ]
-    assert sum(layer_chart.data[0]["values"]) == 175
-    assert sum(decision_chart.data[0]["y"]) == 175
+    assert sum(layer_chart.data[0]["values"]) == report.run_metadata.guarded_attack_count
+    assert sum(decision_chart.data[0]["y"]) == report.run_metadata.guarded_attack_count
 
 
 def test_build_bypass_chart_groups_by_category() -> None:
@@ -63,7 +67,7 @@ def test_build_bypass_chart_groups_by_category() -> None:
 
     assert len(figure.data) == 3
     assert {trace["name"] for trace in figure.data} == {"Bypass A", "Bypass B", "Bypass C"}
-    assert list(figure.data[1]["x"]) == ["LLM06", "LLM08", "LLM10"]
+    assert list(figure.data[1]["x"]) == ["LLM01", "LLM06", "LLM08", "LLM10"]
 
 
 def test_build_cross_validator_and_owasp_web_charts_use_numeric_report_fields() -> None:

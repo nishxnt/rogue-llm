@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-05-17T00:00:00Z",
+  "primary_scores_path": "tests/fixtures/sample_phase_artifacts/guarded_scores.jsonl",
+  "results_path": "tests/fixtures/sample_phase_artifacts/guarded_results.jsonl",
+  "cache_path": "cache/test.sqlite",
+  "cross_validator_model": "openai/gpt-oss-120b",
+  "sample_fraction": 0.1,
+  "sample_size": 3,
+  "agreement_tolerance": 0.2,
+  "metric_summaries": [
+    {"metric_name": "faithfulness", "compared_count": 2, "agreement_count": 2, "agreement_rate": 1.0, "mean_absolute_delta": 0.05, "skipped_count": 0},
+    {"metric_name": "hallucination", "compared_count": 2, "agreement_count": 1, "agreement_rate": 0.5, "mean_absolute_delta": 0.18, "skipped_count": 1},
+    {"metric_name": "refusal", "compared_count": 3, "agreement_count": 2, "agreement_rate": 0.6667, "mean_absolute_delta": 0.12, "skipped_count": 0}
+  ],
+  "comparisons": []
+}

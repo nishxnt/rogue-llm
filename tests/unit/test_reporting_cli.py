@@ -1,12 +1,23 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from typer.testing import CliRunner
 
 from src.reporting.cli import app
+from tests.unit.reporting_fixture_paths import (
+    CROSS_VALIDATION,
+    GUARDED_DECISIONS,
+    GUARDED_RESULTS,
+    GUARDED_RISK,
+    GUARDED_SCORES,
+    RESIDUAL_ANALYSIS,
+    UNGUARDED_RISK,
+)
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+if TYPE_CHECKING:
+    from pathlib import Path
+
 RUNNER = CliRunner()
 
 
@@ -16,19 +27,19 @@ def test_reporting_cli_full_generates_json_and_html(tmp_path: Path) -> None:
         [
             "full",
             "--unguarded-risk",
-            str(REPO_ROOT / "results/run_20260516_131022/risk_scores.json"),
+            str(UNGUARDED_RISK),
             "--guarded-results",
-            str(REPO_ROOT / "results/run_20260516_164921/results.jsonl"),
+            str(GUARDED_RESULTS),
             "--guarded-decisions",
-            str(REPO_ROOT / "results/run_20260516_164921/guardrail_decisions.jsonl"),
+            str(GUARDED_DECISIONS),
             "--guarded-scores",
-            str(REPO_ROOT / "results/run_20260517_115140/scores.jsonl"),
+            str(GUARDED_SCORES),
             "--guarded-risk",
-            str(REPO_ROOT / "results/run_20260517_115140/risk_scores.json"),
+            str(GUARDED_RISK),
             "--residual-analysis",
-            str(REPO_ROOT / "results/run_20260517_115451/residual_analysis.json"),
+            str(RESIDUAL_ANALYSIS),
             "--cross-validation",
-            str(REPO_ROOT / "results/cross_validation_20260516_132118/cross_validation.json"),
+            str(CROSS_VALIDATION),
             "--output-root",
             str(tmp_path),
             "--report-tag",
