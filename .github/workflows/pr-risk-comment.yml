@@ -24,7 +24,6 @@ env:
   PYTHON_VERSION: "3.11"
   UV_CACHE_DIR: ~/.cache/uv
   PIP_CACHE_DIR: ~/.cache/pip
-  CACHE_KEY: ${{ runner.os }}-deps-${{ hashFiles('pyproject.toml', 'uv.lock') }}
   SAMPLE_SIZE: "25"
   RESULTS_ROOT: ci_results
   CACHE_PATH: cache/ci_results_cache.sqlite
@@ -52,9 +51,9 @@ jobs:
           path: |
             ~/.cache/uv
             ~/.cache/pip
-          key: ${{ env.CACHE_KEY }}
+          key: ubuntu-deps-${{ hashFiles('pyproject.toml', 'uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-deps-
+            ubuntu-deps-
 
       - name: Install dependencies
         run: uv sync --group eval --locked
