@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RogueLLM Risk Report</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --surface: #ffffff;
+      --surface-alt: #eef2ff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #dbe1ea;
+      --blue: #2563eb;
+      --teal: #0f766e;
+      --amber: #d97706;
+      --red: #dc2626;
+      --purple: #7c3aed;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+      color: #ffffff;
+      border-radius: 8px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.78;
+      margin-bottom: 10px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    h1 { font-size: 34px; line-height: 1.12; }
+    h2 { font-size: 22px; margin-bottom: 18px; }
+    h3 { font-size: 16px; margin-bottom: 8px; }
+
+    p { margin: 0; color: var(--muted); }
+
+    .hero p {
+      color: rgba(255, 255, 255, 0.82);
+      max-width: 860px;
+      margin-top: 14px;
+      font-size: 16px;
+    }
+
+    .meta-grid, .summary-grid, .finding-grid, .chart-grid, .detail-grid {
+      display: grid;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .meta-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .finding-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .chart-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .detail-grid { grid-template-columns: 1.1fr 0.9fr; }
+
+    .metric, .finding, .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .metric, .finding { padding: 18px; }
+    .panel { padding: 24px; margin-top: 20px; }
+    .panel.alt { background: var(--surface-alt); }
+
+    .metric .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .metric .value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .metric .subvalue {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .finding .severity {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+      color: #ffffff;
+      background: var(--amber);
+    }
+
+    .finding .severity.high { background: var(--red); }
+    .finding .severity.medium { background: var(--amber); }
+    .finding .severity.low { background: var(--teal); }
+
+    .finding .attack-list {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .chart-shell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      min-height: 460px;
+    }
+
+    .chart-wide {
+      grid-column: 1 / -1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+
+    .number { text-align: right; font-variant-numeric: tabular-nums; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .muted { color: var(--muted); }
+    .list { margin: 0; padding-left: 18px; color: var(--muted); }
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .band {
+      margin-top: 24px;
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .highlight {
+      color: var(--blue);
+      font-weight: 700;
+    }
+
+    @media (max-width: 1024px) {
+      .meta-grid, .summary-grid, .finding-grid, .chart-grid, .detail-grid {
+        grid-template-columns: 1fr;
+      }
+      .page { padding: 20px 16px 48px; }
+      .hero { padding: 24px; }
+      h1 { font-size: 28px; }
+    }
+  </style>
+  <script>{{ plotly_js | safe }}</script>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="eyebrow">RogueLLM · {{ report.run_metadata.report_tag }} · {{ report.run_metadata.report_phase }}</div>
+      <h1>Risk Report and Guardrail Delta Evaluation</h1>
+      <p>
+        System Risk Score reduced from {{ "%.4f"|format(report.system_risk.without_infrastructure_failures.unguarded_risk_score) }}
+        to {{ "%.4f"|format(report.system_risk.without_infrastructure_failures.guarded_risk_score) }}
+        without infrastructure failures — an
+        <span class="highlight">{{ "%.1f%%"|format(report.system_risk.without_infrastructure_failures.percent_reduction * 100) }}</span>
+        reduction, well above the 20% target.
+      </p>
+
+      <div class="meta-grid">
+        <div class="metric">
+          <div class="label">Generated</div>
+          <div class="value mono" style="font-size:18px;">{{ report.run_metadata.generated_at }}</div>
+          <div class="subvalue">Standalone HTML, offline-capable</div>
+        </div>
+        <div class="metric">
+          <div class="label">Branch</div>
+          <div class="value mono" style="font-size:18px;">{{ report.run_metadata.git_branch }}</div>
+          <div class="subvalue">Commit {{ report.run_metadata.git_commit[:8] }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Attack Rows</div>
+          <div class="value">{{ report.run_metadata.attack_count }}</div>
+          <div class="subvalue">{{ report.run_metadata.metric_row_count }} metric rows scored</div>
+        </div>
+        <div class="metric">
+          <div class="label">Target Hit</div>
+          <div class="value">{{ "Yes" if report.system_risk.without_infrastructure_failures.target_hit else "No" }}</div>
+          <div class="subvalue">20% reduction threshold</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band">
+      <div class="section-header">
+        <div>
+          <h2>Executive Summary</h2>
+          <p>Headline metrics and the three findings that materially change how the Phase 5 result should be interpreted.</p>
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="metric">
+          <div class="label">System Risk Reduction</div>
+          <div class="value">{{ "%.1f%%"|format(report.system_risk.without_infrastructure_failures.percent_reduction * 100) }}</div>
+          <div class="subvalue">Without infrastructure failures</div>
+        </div>
+        <div class="metric">
+          <div class="label">With Infra Failures</div>
+          <div class="value">{{ "%.1f%%"|format(report.system_risk.with_infrastructure_failures.percent_reduction * 100) }}</div>
+          <div class="subvalue">Includes fail-closed scoring impact</div>
+        </div>
+        <div class="metric">
+          <div class="label">L2 Fail-Closed</div>
+          <div class="value">{{ "%.1f%%"|format(report.l2_fail_closed_analysis.fail_closed_share * 100) }}</div>
+          <div class="subvalue">{{ report.l2_fail_closed_analysis.fail_closed_count }} attacks</div>
+        </div>
+        <div class="metric">
+          <div class="label">Guarded Faithfulness Coverage</div>
+          <div class="value">{{ report.faithfulness_coverage.scored_count }}/{{ report.faithfulness_coverage.total_count }}</div>
+          <div class="subvalue">{{ "%.1f%%"|format(report.faithfulness_coverage.scored_share * 100) }} scorable</div>
+        </div>
+      </div>
+
+      <div class="finding-grid">
+        {% for finding in report.honest_findings %}
+        <article class="finding">
+          <div class="severity {{ finding.severity }}">{{ finding.severity }}</div>
+          <h3>{{ finding.title }}</h3>
+          <p>{{ finding.description }}</p>
+          {% if finding.related_attack_ids %}
+          <div class="attack-list">
+            Related attacks:
+            {% for attack_id in finding.related_attack_ids %}
+            <span class="mono">{{ attack_id }}</span>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="band">
+      <div class="section-header">
+        <div>
+          <h2>Charts</h2>
+          <p>All charts are rendered offline from the committed report JSON with embedded Plotly runtime.</p>
+        </div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-shell chart-wide">{{ charts.risk_heatmap | safe }}</div>
+        <div class="chart-shell">{{ charts.layer_donut | safe }}</div>
+        <div class="chart-shell">{{ charts.decision_bar | safe }}</div>
+        <div class="chart-shell">{{ charts.bypass_bar | safe }}</div>
+        <div class="chart-shell">{{ charts.agreement_bar | safe }}</div>
+        <div class="chart-shell">{{ charts.owasp_web_chart | safe }}</div>
+      </div>
+    </section>
+
+    <section class="detail-grid">
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <h2>Per-Category Risk Delta</h2>
+            <p>Without infrastructure failures, the benchmark hits the target in every category except LLM06.</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th class="number">Unguarded</th>
+              <th class="number">Guarded</th>
+              <th class="number">Delta</th>
+              <th class="number">Reduction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.per_category_risk.without_infrastructure_failures %}
+            <tr>
+              <td class="mono">{{ row.owasp_category }}</td>
+              <td class="number">{{ "%.4f"|format(row.unguarded_risk_score) }}</td>
+              <td class="number">{{ "%.4f"|format(row.guarded_risk_score) }}</td>
+              <td class="number">{{ "%.4f"|format(row.delta) }}</td>
+              <td class="number">{{ "%.1f%%"|format(row.percent_reduction * 100) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel alt">
+        <div class="section-header">
+          <div>
+            <h2>Layer and Residual Summary</h2>
+            <p>Residual attack IDs and the fail-closed mechanism are kept explicit because they change interpretation.</p>
+          </div>
+        </div>
+        <ul class="list">
+          <li><span class="mono">L2 fail-closed</span>: {{ report.l2_fail_closed_analysis.fail_closed_count }} attacks ({{ "%.1f%%"|format(report.l2_fail_closed_analysis.fail_closed_share * 100) }})</li>
+          <li><span class="mono">LLM06</span>: {{ "%.1f%%"|format(report.llm06_weakness_analysis.percent_reduction * 100) }} reduction without infrastructure failures</li>
+          <li><span class="mono">Bypass B</span>: {{ report.residual_analysis.attack_ids_by_bypass.get("B", []) | join(", ") if report.residual_analysis.attack_ids_by_bypass.get("B", []) else "none" }}</li>
+          <li><span class="mono">Bypass C</span>: {{ report.residual_analysis.attack_ids_by_bypass.get("C", []) | join(", ") if report.residual_analysis.attack_ids_by_bypass.get("C", []) else "none" }}</li>
+        </ul>
+      </section>
+    </section>
+
+    <section class="band">
+      <div class="section-header">
+        <div>
+          <h2>Residual Vulnerabilities</h2>
+          <p>Per-attack residuals are preserved directly in the report contract for downstream tooling and PR summaries.</p>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Attack ID</th>
+            <th>Category</th>
+            <th>Bypass</th>
+            <th>Decision</th>
+            <th class="number">Guarded</th>
+            <th class="number">Unguarded</th>
+            <th>Remediation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for attack in report.residual_analysis.residual_attacks %}
+          <tr>
+            <td class="mono">{{ attack.attack_id }}</td>
+            <td class="mono">{{ attack.owasp_category }}</td>
+            <td>{{ attack.bypass_class }}</td>
+            <td>{{ attack.guardrail_decision or "none" }}</td>
+            <td class="number">{{ "%.3f"|format(attack.guarded_vulnerability_score) }}</td>
+            <td class="number">{{ "%.3f"|format(attack.unguarded_vulnerability_score) }}</td>
+            <td>{{ attack.recommended_remediation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="detail-grid">
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <h2>L2 Fail-Closed Analysis</h2>
+            <p>The headline number is valid, but this section keeps the infrastructure component visible.</p>
+          </div>
+        </div>
+        <p><strong>{{ "%.1f%%"|format(report.l2_fail_closed_analysis.fail_closed_share * 100) }}</strong> of guarded attacks were blocked because the classifier failed closed.</p>
+        <p style="margin-top:12px;">{{ report.l2_fail_closed_analysis.scoring_effect }}</p>
+        <p style="margin-top:12px;">{{ report.l2_fail_closed_analysis.interpretation }}</p>
+        <ul class="list" style="margin-top:12px;">
+          {% for question in report.l2_fail_closed_analysis.investigation_questions %}
+          <li>{{ question }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <h2>LLM06 Weakness</h2>
+            <p>Excessive Agency is the weakest defended category and the highest-priority follow-up target.</p>
+          </div>
+        </div>
+        <p><strong>{{ "%.1f%%"|format(report.llm06_weakness_analysis.percent_reduction * 100) }}</strong> reduction without infrastructure failures.</p>
+        <p style="margin-top:12px;">{{ report.llm06_weakness_analysis.interpretation }}</p>
+        <p style="margin-top:12px;" class="mono">{{ report.llm06_weakness_analysis.regressed_attack_ids | join(", ") }}</p>
+      </section>
+    </section>
+
+    <section class="detail-grid">
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <h2>OWASP Web Chunking Finding</h2>
+            <p>Bullet-heavy OWASP Web chunks remain the clearest explanation for the low-faithfulness slice.</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Slice</th>
+              <th class="number">Mean Faithfulness</th>
+              <th class="number">Bullet Markers / Chunk</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">contains_owasp_web</td>
+              <td class="number">{{ "%.4f"|format(report.owasp_web_chunking_finding.contains_owasp_web_mean_faithfulness) }}</td>
+              <td class="number">{{ "%.2f"|format(report.owasp_web_chunking_finding.contains_owasp_web_bullet_markers_per_chunk) }}</td>
+            </tr>
+            <tr>
+              <td class="mono">nvd_only</td>
+              <td class="number">{{ "%.4f"|format(report.owasp_web_chunking_finding.nvd_only_mean_faithfulness) }}</td>
+              <td class="number">{{ "%.2f"|format(report.owasp_web_chunking_finding.nvd_only_bullet_markers_per_chunk) }}</td>
+            </tr>
+            <tr>
+              <td class="mono">owasp_llm_only</td>
+              <td class="number">{{ "%.4f"|format(report.owasp_web_chunking_finding.owasp_llm_only_mean_faithfulness) }}</td>
+              <td class="number">{{ "%.2f"|format(report.owasp_web_chunking_finding.owasp_llm_only_bullet_markers_per_chunk) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top:14px;">{{ report.owasp_web_chunking_finding.interpretation }}</p>
+      </section>
+
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <h2>Faithfulness and Cross-Validation</h2>
+            <p>Guarded faithfulness sparsity and cross-validator behavior are shown directly rather than hidden behind aggregate scores.</p>
+          </div>
+        </div>
+        <p>Faithfulness coverage: <strong>{{ report.faithfulness_coverage.scored_count }}/{{ report.faithfulness_coverage.total_count }}</strong> ({{ "%.1f%%"|format(report.faithfulness_coverage.scored_share * 100) }})</p>
+        <ul class="list" style="margin-top:12px;">
+          {% for reason, count in report.faithfulness_coverage.skip_reasons.items() %}
+          <li><span class="mono">{{ reason }}</span>: {{ count }}</li>
+          {% endfor %}
+        </ul>
+        <p style="margin-top:12px;">{{ report.cross_validator_summary.notable_limitation }}</p>
+      </section>
+    </section>
+
+    <section class="band">
+      <div class="section-header">
+        <div>
+          <h2>Methodology and Limitations</h2>
+          <p>Cross-family judging, free-tier constraints, and known limitations are part of the portfolio story, not omitted caveats.</p>
+        </div>
+      </div>
+      <div class="detail-grid">
+        <div>
+          <h3>Methodology</h3>
+          <ul class="list">
+            {% for note in report.methodology_notes %}
+            <li>{{ note }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div>
+          <h3>Limitations</h3>
+          <ul class="list">
+            {% for note in report.limitations %}
+            <li>{{ note }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
