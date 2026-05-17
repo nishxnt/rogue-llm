@@ -785,3 +785,40 @@ Interpretation:
 - Per-attack and per-layer token telemetry is currently insufficient for cost reporting.
 - Carry this forward into Phase 6 as a reporting improvement: persist token attribution for target,
   classifier, and judge calls separately so cost-of-defense can be analyzed honestly.
+
+---
+
+## Phase 6 — CI Reproducibility Fixes
+
+**Branch:** `feat/phase-6-reporting-cicd`
+**Date:** 2026-05-17
+
+### GitHub Actions cache key context
+
+`ci.yml` and `pr-risk-comment.yml` originally used `runner.os` in a top-level `env:` cache key.
+GitHub Actions does not expose the `runner` context until a job is assigned to a runner, so workflow
+parsing failed before jobs could start.
+
+Fix: remove the top-level cache key and inline a static Ubuntu key in each `actions/cache@v4` step:
+`ubuntu-deps-${{ hashFiles('pyproject.toml', 'uv.lock') }}` with `ubuntu-deps-` restore keys.
+
+### Fresh-checkout test discipline
+
+CI exposed two local-environment assumptions that were hidden on the developer machine:
+
+- Tests importing CLI modules must not require `.env` or `GROQ_API_KEY` at import time. CLI settings
+  are now lazy-loaded inside commands, and `tests/unit/test_cli_imports_without_env.py` protects
+  import behavior with `GROQ_API_KEY` unset.
+- Tests that exercise runtime `Settings()` validation use a dummy `GROQ_API_KEY` from
+  `tests/conftest.py`. The dummy key only satisfies Pydantic validation; tests still mock live Groq
+  clients.
+- Reporting tests no longer read local `results/run_*` artifacts. Minimal Phase 4/5 fixture
+  artifacts live under `tests/fixtures/sample_phase_artifacts/` so a fresh checkout can run the
+  suite without local benchmark outputs.
+
+Verification on PR `#14` at commit `397dc3b`:
+
+- `ci.yml`: `lint`, `typecheck`, and `test` all passed.
+- `pr-risk-comment.yml`: passed on the draft PR.
+- Local CI-style coverage command with cleared `GROQ_API_KEY` passed at `85.61%`, above the `80%`
+  threshold.
