@@ -14,9 +14,10 @@ if TYPE_CHECKING:
 
 def build_risk_heatmap(report: RiskReport) -> go.Figure:
     """Build the per-category unguarded/guarded/delta heatmap."""
-    categories = [
+    category_ids = [
         item.owasp_category for item in report.per_category_risk.without_infrastructure_failures
     ]
+    categories = [_display_category(category_id) for category_id in category_ids]
     unguarded = [
         item.unguarded_risk_score
         for item in report.per_category_risk.without_infrastructure_failures
@@ -43,7 +44,8 @@ def build_risk_heatmap(report: RiskReport) -> go.Figure:
                 texttemplate="%{text}",
                 textfont={"size": 12},
                 colorbar={"title": "Risk"},
-                hovertemplate="Category=%{x}<br>Series=%{y}<br>Value=%{z:.3f}<extra></extra>",
+                customdata=[category_ids, category_ids, category_ids],
+                hovertemplate="Category=%{customdata}<br>Series=%{y}<br>Value=%{z:.3f}<extra></extra>",
             )
         ]
     )
@@ -54,7 +56,7 @@ def build_risk_heatmap(report: RiskReport) -> go.Figure:
         paper_bgcolor="#ffffff",
         plot_bgcolor="#ffffff",
     )
-    figure.update_xaxes(tickangle=-25)
+    figure.update_xaxes(tickangle=0)
     return figure
 
 
@@ -88,7 +90,7 @@ def build_layer_attribution_donut(report: RiskReport) -> go.Figure:
 
 def build_decision_distribution_bar(report: RiskReport) -> go.Figure:
     """Build the decision distribution bar chart."""
-    labels = [entry.label for entry in report.decision_distribution.entries]
+    labels = [_wrap_label(entry.label) for entry in report.decision_distribution.entries]
     values = [entry.count for entry in report.decision_distribution.entries]
     figure = go.Figure(
         data=[
@@ -109,7 +111,7 @@ def build_decision_distribution_bar(report: RiskReport) -> go.Figure:
         paper_bgcolor="#ffffff",
         plot_bgcolor="#ffffff",
     )
-    figure.update_xaxes(tickangle=-25)
+    figure.update_xaxes(tickangle=0)
     return figure
 
 
@@ -119,6 +121,7 @@ def build_bypass_breakdown_bar(report: RiskReport) -> go.Figure:
     for attack in report.residual_analysis.residual_attacks:
         category_counts[attack.owasp_category][attack.bypass_class] += 1
     categories = sorted(category_counts)
+    display_categories = [_display_category(category) for category in categories]
     bypass_classes = ["A", "B", "C"]
     figure = go.Figure()
     colors = {"A": "#1d4ed8", "B": "#f97316", "C": "#7c3aed"}
@@ -126,10 +129,11 @@ def build_bypass_breakdown_bar(report: RiskReport) -> go.Figure:
         figure.add_trace(
             go.Bar(
                 name=f"Bypass {bypass_class}",
-                x=categories,
+                x=display_categories,
                 y=[category_counts[category].get(bypass_class, 0) for category in categories],
                 marker_color=colors[bypass_class],
-                hovertemplate="Category=%{x}<br>Count=%{y}<extra></extra>",
+                customdata=categories,
+                hovertemplate="Category=%{customdata}<br>Count=%{y}<extra></extra>",
             )
         )
     figure.update_layout(
@@ -177,7 +181,7 @@ def build_cross_validator_agreement_bar(report: RiskReport) -> go.Figure:
 def build_owasp_web_chunking_chart(report: RiskReport) -> go.Figure:
     """Build the OWASP Web chunking finding chart with dual metrics."""
     finding = report.owasp_web_chunking_finding
-    labels = ["contains_owasp_web", "nvd_only", "owasp_llm_only"]
+    labels = ["Contains OWASP Web", "NVD only", "OWASP LLM only"]
     bullet_markers = [
         finding.contains_owasp_web_bullet_markers_per_chunk,
         finding.nvd_only_bullet_markers_per_chunk,
@@ -235,3 +239,11 @@ def _as_float(value: object) -> float:
         except ValueError:
             return 0.0
     return 0.0
+
+
+def _display_category(category_id: str) -> str:
+    return category_id.replace(":2025", "")
+
+
+def _wrap_label(label: str) -> str:
+    return label.replace(" ", "<br>")
