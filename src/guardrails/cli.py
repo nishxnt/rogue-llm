@@ -12,6 +12,10 @@ from src.config import get_settings
 from src.evaluation.cli import score_results
 from src.guardrails.delta import build_delta_report, load_risk_report, write_delta_report
 from src.guardrails.guardrail_target import GuardrailTarget
+from src.guardrails.residual_analysis import (
+    analyze_residual_vulnerabilities,
+    write_timestamped_residual_analysis,
+)
 from src.pipeline.attack_runner import AttackRunner
 from src.pipeline.groq_client import (
     GroqClientManager,
@@ -39,6 +43,7 @@ RiskPathOption = Annotated[
     Path,
     typer.Option("--risk", file_okay=True, dir_okay=False, readable=True),
 ]
+ThresholdOption = Annotated[float, typer.Option("--threshold", min=0.0, max=1.0)]
 CachePathOption = Annotated[Path, typer.Option("--cache")]
 OutputRootOption = Annotated[Path, typer.Option("--output-root")]
 ConcurrencyOption = Annotated[int, typer.Option("--concurrency", min=1)]
@@ -138,6 +143,47 @@ def delta_report(
     typer.echo(f"System delta: {report.system_delta:.4f}")
     for category in report.category_deltas:
         typer.echo(f"{category.owasp_category}: delta={category.delta:.4f}")
+
+
+@app.command("residual-report")
+def residual_report(
+    guarded_results: Annotated[
+        Path,
+        typer.Option("--guarded-results", file_okay=True, dir_okay=False, readable=True),
+    ],
+    guarded_decisions: Annotated[
+        Path,
+        typer.Option("--guarded-decisions", file_okay=True, dir_okay=False, readable=True),
+    ],
+    guarded_risk: Annotated[
+        Path,
+        typer.Option("--guarded-risk", file_okay=True, dir_okay=False, readable=True),
+    ],
+    unguarded_risk: Annotated[
+        Path,
+        typer.Option("--unguarded-risk", file_okay=True, dir_okay=False, readable=True),
+    ],
+    output_root: OutputRootOption = _DEFAULT_OUTPUT_ROOT,
+    threshold: ThresholdOption = 0.5,
+) -> None:
+    """Write residual vulnerability analysis from guarded and unguarded artifacts."""
+    report = analyze_residual_vulnerabilities(
+        guarded_results_path=guarded_results,
+        guarded_risk_path=guarded_risk,
+        guarded_decisions_path=guarded_decisions,
+        unguarded_risk_path=unguarded_risk,
+        threshold=threshold,
+    )
+    json_path, md_path = write_timestamped_residual_analysis(report, output_root=output_root)
+    typer.echo(f"Residual analysis: {json_path}")
+    typer.echo(f"Residual summary: {md_path}")
+    typer.echo(f"Residual attacks: {report.residual_count}")
+    typer.echo(
+        "Bypass counts: "
+        f"A={report.bypass_counts.get('A', 0)} "
+        f"B={report.bypass_counts.get('B', 0)} "
+        f"C={report.bypass_counts.get('C', 0)}"
+    )
 
 
 def probe_groq_rate_limits(model: str) -> list[GroqPreflightBudget]:

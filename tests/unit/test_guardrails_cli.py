@@ -170,3 +170,70 @@ def test_delta_report_cli_writes_delta_artifact(tmp_path: Path) -> None:
     assert paths
     payload = json.loads(paths[0].read_text(encoding="utf-8"))
     assert payload["system_delta"] == 0.3
+
+
+def test_residual_report_cli_writes_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    guarded_results = tmp_path / "guarded_results.jsonl"
+    guarded_decisions = tmp_path / "guardrail_decisions.jsonl"
+    guarded_risk = tmp_path / "guarded_risk.json"
+    unguarded_risk = tmp_path / "unguarded_risk.json"
+    for path in (guarded_results, guarded_decisions, guarded_risk, unguarded_risk):
+        path.write_text("", encoding="utf-8")
+
+    report = {
+        "threshold": 0.5,
+        "residual_count": 1,
+        "bypass_counts": {"A": 1},
+        "attack_ids_by_bypass": {"A": ["LLM01-0001"], "B": [], "C": []},
+        "residual_attacks": [],
+    }
+
+    def fake_analyze_residual_vulnerabilities(**_: object) -> object:
+        return type("ResidualReport", (), report)()
+
+    def fake_write_timestamped_residual_analysis(
+        _report: object,
+        *,
+        output_root: Path,
+    ) -> tuple[Path, Path]:
+        run_dir = output_root / "run_20260517_000000"
+        run_dir.mkdir(parents=True)
+        json_path = run_dir / "residual_analysis.json"
+        md_path = run_dir / "residual_summary.md"
+        json_path.write_text("{}", encoding="utf-8")
+        md_path.write_text("# Residual Vulnerability Summary", encoding="utf-8")
+        return json_path, md_path
+
+    monkeypatch.setattr(
+        cli, "analyze_residual_vulnerabilities", fake_analyze_residual_vulnerabilities
+    )
+    monkeypatch.setattr(
+        cli,
+        "write_timestamped_residual_analysis",
+        fake_write_timestamped_residual_analysis,
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "residual-report",
+            "--guarded-results",
+            str(guarded_results),
+            "--guarded-decisions",
+            str(guarded_decisions),
+            "--guarded-risk",
+            str(guarded_risk),
+            "--unguarded-risk",
+            str(unguarded_risk),
+            "--output-root",
+            str(tmp_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Residual attacks: 1" in result.output
+    paths = list(tmp_path.glob("run_*/residual_analysis.json"))
+    assert paths
