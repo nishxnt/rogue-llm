@@ -22,6 +22,8 @@ cache/*
 reports/run_*
 results/*
 !results/.gitkeep
+!results/baseline/
+!results/baseline/**
 !results/baseline_ragas.json
 data/knowledge_base/*
 !data/knowledge_base/.gitkeep
