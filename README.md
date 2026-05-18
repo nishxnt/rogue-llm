@@ -1,6 +1,6 @@
 # RogueLLM
 
-[![CI](https://github.com/nishxnt/rogue-llm/actions/workflows/ci.yml/badge.svg?branch=feat/phase-6-reporting-cicd)](https://github.com/nishxnt/rogue-llm/actions/workflows/ci.yml?query=branch%3Afeat%2Fphase-6-reporting-cicd)
+[![CI](https://github.com/nishxnt/rogue-llm/actions/workflows/ci.yml/badge.svg)](https://github.com/nishxnt/rogue-llm/actions/workflows/ci.yml)
 ![Coverage](https://img.shields.io/badge/coverage-85.61%25-brightgreen)
 
 ## Project Summary
