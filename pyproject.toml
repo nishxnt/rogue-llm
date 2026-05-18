@@ -109,3 +109,15 @@ addopts = "-ra -m 'not integration'"
 markers = [
     "integration: marks tests as requiring live API calls (deselect with -m 'not integration')",
 ]
+
+[tool.coverage.run]
+omit = [
+    "src/attack_generation/canary_run.py",
+    "src/attack_generation/run_llm09.py",
+]
+
+[tool.coverage.report]
+omit = [
+    "src/attack_generation/canary_run.py",
+    "src/attack_generation/run_llm09.py",
+]
