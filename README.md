@@ -141,6 +141,12 @@ The report includes the heatmap above plus drill-down charts for category deltas
 - Add markdown-aware chunking for OWASP Web sources to address the Phase 4 faithfulness finding.
 - Add triple-judge cross-validation with Gemini as a third model family.
 
+## Built with AI Coding Agents
+
+RogueLLM was developed using AI coding agents with the project owner acting as project head. The workflow used a phase-gate model: spec, plan review, implementation by agent, gate review, PR, and merge. Six phases shipped this way, each with documented findings and honest limitation tracking.
+
+The repo intentionally preserves working notes and agent configuration artifacts, including [CLAUDE.md](CLAUDE.md) and `.claude/`, for methodological transparency. See [CLAUDE.md](CLAUDE.md) for the development process documentation.
+
 ## Specification and Notes
 
 - [PROJECT_SPEC.md](PROJECT_SPEC.md)

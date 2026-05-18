@@ -1,3 +1,18 @@
+> **About this file:** Working notes from AI-assisted development.
+> RogueLLM was built using AI coding agents (Claude Code as primary,
+> Codex via ACP as fallback) with the project owner as project head -
+> defining specs, reviewing plans at phase gates, and approving merges.
+>
+> This file documents the engineering decisions, model pinning,
+> phase-gate process, and lessons learned across six phases. It is
+> committed intentionally for methodological transparency: agent-native
+> engineering is a real practice, and reproducibility includes the
+> workflow, not just the code.
+>
+> If you're reviewing this repo for hiring or thesis evaluation, this
+> file shows *how* the project was built. The code itself shows *what*
+> was built.
+
 # RogueLLM — Claude Code Context
 
 ## Project
