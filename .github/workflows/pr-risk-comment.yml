@@ -1,0 +1,185 @@
+name: PR Risk Comment
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - "src/**"
+  workflow_dispatch:
+
+concurrency:
+  group: pr-risk-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  actions: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  UV_CACHE_DIR: ~/.cache/uv
+  PIP_CACHE_DIR: ~/.cache/pip
+  SAMPLE_SIZE: "25"
+  RESULTS_ROOT: ci_results
+  CACHE_PATH: cache/ci_results_cache.sqlite
+
+jobs:
+  pr-risk-comment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cache/pip
+          key: ubuntu-deps-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ubuntu-deps-
+
+      - name: Install dependencies
+        run: uv sync --group eval --locked
+
+      - name: Run guarded 25-attack sample and score it
+        id: sample
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p "${RESULTS_ROOT}/attacks" "${RESULTS_ROOT}/eval" "${RESULTS_ROOT}/logs" "${RESULTS_ROOT}/comment"
+
+          status="success"
+
+          uv run python -m src.guardrails.cli run-attacks \
+            --sample "${SAMPLE_SIZE}" \
+            --skip-preflight \
+            --concurrency 2 \
+            --cache "${CACHE_PATH}" \
+            --output-root "${RESULTS_ROOT}/attacks" \
+            > "${RESULTS_ROOT}/logs/guarded_attacks.log" 2>&1 || status="failed"
+
+          if [[ "${status}" == "failed" ]]; then
+            if grep -Eqi "429|RateLimitError|rate limit|tpd|insufficient|quota" "${RESULTS_ROOT}/logs/guarded_attacks.log"; then
+              status="tpd_exhausted"
+            else
+              echo "status=workflow_error" >> "$GITHUB_OUTPUT"
+              cat "${RESULTS_ROOT}/logs/guarded_attacks.log"
+              exit 1
+            fi
+          fi
+
+          if [[ "${status}" == "success" ]]; then
+            attacks_dir="$(find "${RESULTS_ROOT}/attacks" -maxdepth 1 -type d -name 'run_*' | sort | tail -n 1)"
+            echo "attacks_dir=${attacks_dir}" >> "$GITHUB_OUTPUT"
+
+            uv run python -m src.evaluation.cli full \
+              --results "${attacks_dir}/results.jsonl" \
+              --cache "${CACHE_PATH}" \
+              --output-root "${RESULTS_ROOT}/eval" \
+              --concurrency 2 \
+              --skip-preflight \
+              > "${RESULTS_ROOT}/logs/evaluation.log" 2>&1 || status="failed"
+          fi
+
+          if [[ "${status}" == "failed" ]]; then
+            if grep -Eqi "429|RateLimitError|rate limit|tpd|insufficient|quota" "${RESULTS_ROOT}/logs/evaluation.log"; then
+              status="tpd_exhausted"
+            else
+              echo "status=workflow_error" >> "$GITHUB_OUTPUT"
+              cat "${RESULTS_ROOT}/logs/evaluation.log"
+              exit 1
+            fi
+          fi
+
+          if [[ "${status}" == "success" ]]; then
+            eval_dir="$(find "${RESULTS_ROOT}/eval" -maxdepth 1 -type d -name 'run_*' | sort | tail -n 1)"
+            echo "eval_dir=${eval_dir}" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+
+      - name: Build PR comment body
+        id: comment
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          baseline_arg=()
+          if [[ -f "results/baseline/risk_report.json" ]]; then
+            baseline_arg=(--baseline "results/baseline/risk_report.json")
+          fi
+
+          if [[ "${{ steps.sample.outputs.status }}" == "success" ]]; then
+            uv run python .github/scripts/build_pr_risk_comment.py \
+              --status success \
+              --risk "${{ steps.sample.outputs.eval_dir }}/risk_scores.json" \
+              --results "${{ steps.sample.outputs.attacks_dir }}/results.jsonl" \
+              "${baseline_arg[@]}" \
+              --run-url "${run_url}" \
+              --sample-size "${SAMPLE_SIZE}" \
+              --output "${RESULTS_ROOT}/comment/pr_comment.md"
+          elif [[ "${{ steps.sample.outputs.status }}" == "tpd_exhausted" ]]; then
+            uv run python .github/scripts/build_pr_risk_comment.py \
+              --status tpd_exhausted \
+              --run-url "${run_url}" \
+              --output "${RESULTS_ROOT}/comment/pr_comment.md"
+          else
+            uv run python .github/scripts/build_pr_risk_comment.py \
+              --status workflow_error \
+              --run-url "${run_url}" \
+              --output "${RESULTS_ROOT}/comment/pr_comment.md"
+          fi
+
+      - name: Upload sample artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-risk-sample-${{ github.event.pull_request.number || github.run_id }}
+          path: |
+            ci_results/attacks/**
+            ci_results/eval/**
+            ci_results/logs/**
+            ci_results/comment/pr_comment.md
+          if-no-files-found: warn
+
+      - name: Upsert PR comment
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          marker="<!-- rogue-llm-risk-comment -->"
+          body="$(cat "${RESULTS_ROOT}/comment/pr_comment.md")"
+          existing_id="$(
+            gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
+              --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"${marker}\"))) | .id" \
+              | head -n 1
+          )"
+
+          if [[ -n "${existing_id}" ]]; then
+            gh api "repos/${GITHUB_REPOSITORY}/issues/comments/${existing_id}" \
+              --method PATCH \
+              -f body="${body}" >/dev/null
+          else
+            gh pr comment "${PR_NUMBER}" --body-file "${RESULTS_ROOT}/comment/pr_comment.md"
+          fi

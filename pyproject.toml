@@ -19,6 +19,8 @@ dependencies = [
     "structlog ~= 25.5.0",
     "jinja2 ~= 3.1.0",
     "plotly ~= 6.7.0",
+    "requests ~= 2.32.0",
+    "psutil ~= 6.1.0",
 ]
 
 [dependency-groups]
@@ -27,6 +29,8 @@ eval = [
     "deepeval ~= 3.9.0",
     "datasketch ~= 1.10.0",
     "spacy ~= 3.8.0",
+    "tiktoken ~= 0.9.0",
+    "instructor ~= 1.9.0",
 ]
 dev = [
     "pytest ~= 9.0.0",
@@ -73,20 +77,47 @@ plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 module = [
+    "numpy",
+    "numpy.*",
     "faiss.*",
     "datasketch.*",
     "ragas.*",
     "deepeval.*",
+    "langchain.*",
+    "langchain_core.*",
     "langchain_community.*",
     "langchain_groq.*",
+    "langchain_text_splitters.*",
     "sentence_transformers.*",
+    "torch.*",
     "spacy.*",
+    "groq.*",
     "wandb.*",
     "plotly.*",
+    "requests.*",
+    "psutil.*",
+    "tiktoken.*",
+    "instructor.*",
+    "yaml.*",
 ]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "-ra"
+addopts = "-ra -m 'not integration'"
+markers = [
+    "integration: marks tests as requiring live API calls (deselect with -m 'not integration')",
+]
+
+[tool.coverage.run]
+omit = [
+    "src/attack_generation/canary_run.py",
+    "src/attack_generation/run_llm09.py",
+]
+
+[tool.coverage.report]
+omit = [
+    "src/attack_generation/canary_run.py",
+    "src/attack_generation/run_llm09.py",
+]

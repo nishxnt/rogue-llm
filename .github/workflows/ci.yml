@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  UV_CACHE_DIR: ~/.cache/uv
+  PIP_CACHE_DIR: ~/.cache/pip
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cache/pip
+          key: ubuntu-deps-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ubuntu-deps-
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+
+      - name: Ruff
+        run: uv run ruff check src tests
+
+      - name: Black
+        run: uv run black --check src tests
+
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cache/pip
+          key: ubuntu-deps-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ubuntu-deps-
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+
+      - name: Mypy
+        run: uv run mypy src
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cache/pip
+          key: ubuntu-deps-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ubuntu-deps-
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+
+      - name: Pytest with coverage
+        run: uv run pytest -q --cov=src --cov-report=term-missing --cov-fail-under=80
